@@ -1,0 +1,849 @@
+Reset & base
+* {
+  box-sizing: border-box;
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background-color: #860a0c;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  will-change: transform;
+}
+
+header.hide {
+  transform: translateY(-100%);
+  box-shadow: none;
+}
+
+header.show {
+  transform: translateY(0);
+}
+
+/* Announcement Banner */
+.announcement-banner {
+  background: #FFE5E6;
+  color: #860a0c;
+  padding: 8px 0;
+  text-align: center;
+  position: relative;
+  z-index: 1001;
+}
+
+.announcement-text {
+  font-size: 0.7rem;
+  font-weight: 200;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+/* NAVBAR container */
+.navbar {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  height: 90px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px;
+}
+
+/* Left side - GPS and Appointment */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  flex: 1;
+}
+
+.nav-appointment {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+  cursor: pointer;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  padding: 8px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.nav-appointment:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Center logo */
+.nav-center {
+  display: flex;
+  justify-content: center;
+}
+
+.nav-logo {
+  height: 85px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* Right side icons */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.nav-icon {
+  position: relative;
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-icon:hover {
+  transform: translateY(-2px);
+  color: #FFE5E6;
+}
+
+/* Links container */
+.links {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  padding: 0 0 15px;
+  background-color: transparent;
+}
+
+.links a {
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 0.7rem;
+  text-decoration: none;
+  padding: 8px 15px;
+  transition: all 0.3s ease;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.links a::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 0;
+  height: 1px;
+  background-color: #FFE5E6;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.links a:hover::after {
+  width: 60%;
+}
+
+.links a:hover {
+  color: #FFE5E6;
+}
+
+/* Mega Menu Enhancements */
+.mega-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95vw;
+  max-width: 1300px;
+  background: rgba(255, 255, 255, 1);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 40px;
+  padding: 50px;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+  z-index: 1000;
+  /* Bridge the gap between link and menu */
+  margin-top: -10px;
+  padding-top: 60px;
+}
+
+.policies-mega {
+  grid-template-columns: 1fr 1fr;
+  max-width: 700px;
+  padding: 40px;
+  padding-top: 50px;
+}
+
+.policy-link {
+  display: block;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.policy-link .link-text {
+  color: #860a0c !important; /* Force Maroon color */
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.policy-link:hover {
+  transform: translateX(10px);
+  border-bottom-color: #860a0c;
+}
+
+.policy-link:hover .link-text {
+  color: #860a0c;
+}
+
+.policy-link:hover .link-desc {
+  opacity: 0.8;
+}
+
+.mega-section h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #860a0c;
+  letter-spacing: 0.15em;
+  border-bottom: 1px solid rgba(134, 10, 12, 0.1);
+  padding-bottom: 12px;
+}
+
+.mega-section ul li a {
+  color: #444;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  padding: 6px 0;
+  transition: all 0.3s ease;
+}
+
+.mega-section ul li a:hover {
+  color: #860a0c;
+  padding-left: 10px;
+  transform: translateX(5px);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 1024px) {
+  .navbar {
+    padding: 0 20px;
+    height: 80px;
+  }
+  
+  .nav-logo {
+    height: 60px;
+  }
+}
+
+/* Small screen elements - hidden by default */
+.small-screen {
+  display: none;
+}
+
+/* Hamburger button */
+.hamburger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: none;
+  padding: 6px;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  /* Hide nav-right icons on smaller screens */
+  .large-screen {
+    display: none;
+  }
+
+  /* Show hamburger and mobile elements */
+  .small-screen {
+    display: block;
+  }
+
+  /* Show mobile left section */
+  .nav-left-mobile {
+    display: flex !important;
+  }
+
+  /* Show mobile right section */
+  .nav-right-mobile {
+    display: flex;
+  }
+
+  /* Hide desktop left section */
+  .nav-left {
+    display: none;
+  }
+
+  /* Center logo smaller */
+  .nav-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    order: 2;
+  }
+
+  /* Hide links by default */
+  .links {
+    display: none;
+  }
+
+  /* Adjust navbar layout for mobile */
+  .navbar {
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+  }
+
+  /* Hamburger button positioning */
+  .hamburger-btn {
+    display: block;
+    order: 1;
+  }
+
+  /* Mobile appointment icon positioning */
+  .nav-left-mobile {
+    order: 2;
+  }
+
+  /* Mobile right icons positioning */
+  .nav-right-mobile {
+    order: 3;
+  }
+
+  /* Ensure proper spacing */
+  .nav-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    flex: none;
+    z-index: 1;
+  }
+
+  /* Prevent overlapping on smaller screens */
+  .nav-right-mobile {
+    z-index: 2;
+    position: relative;
+  }
+
+  .nav-left-mobile {
+    z-index: 2;
+    position: relative;
+  }
+
+  .hamburger-btn {
+    z-index: 2;
+    position: relative;
+  }
+}
+
+/* iPad and large tablet screens */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .navbar {
+    padding: 0 15px;
+    justify-content: space-between;
+  }
+
+  .nav-center {
+    max-width: 180px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .nav-logo {
+    height: 85px;
+    width: auto;
+  }
+
+  .nav-right-mobile {
+    gap: 15px;
+    margin-left: auto;
+  }
+
+  .nav-left-mobile {
+    margin-right: auto;
+  }
+
+  .nav-icon {
+    padding: 6px;
+  }
+
+  .hamburger-btn {
+    margin-right: 10px;
+  }
+}
+
+/* Tablet and medium mobile screens */
+@media (max-width: 768px) and (min-width: 431px) {
+  .navbar {
+    padding: 0 10px;
+    justify-content: space-between;
+  }
+
+  .nav-center {
+    max-width: 150px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .nav-logo {
+    height: 80px;
+    width: auto;
+  }
+
+  .nav-right-mobile {
+    gap: 12px;
+    margin-left: auto;
+  }
+
+  .nav-left-mobile {
+    margin-right: auto;
+  }
+
+  .nav-icon {
+    padding: 4px;
+  }
+
+  .hamburger-btn {
+    margin-right: 8px;
+  }
+}
+
+/* iPhone 13 specific fixes */
+@media (max-width: 430px) {
+  .navbar {
+    padding: 0 5px;
+    justify-content: space-between;
+    height: 95px;
+    min-height: 95px;
+  }
+
+  .nav-center {
+    max-width: 140px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .nav-logo {
+    height: 85px;
+    width: auto;
+  }
+
+  .nav-right-mobile {
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .nav-left-mobile {
+    margin-right: auto;
+  }
+
+  .nav-icon {
+    padding: 2px;
+  }
+
+  .hamburger-btn {
+    margin-right: 5px;
+  }
+}
+
+/* Extra small screens (iPhone 13 and smaller) */
+@media (max-width: 390px) {
+  .navbar {
+    padding: 0 2px;
+  }
+
+  .nav-center {
+    max-width: 120px;
+  }
+
+  .nav-logo {
+    height: 75px;
+  }
+
+  .nav-right-mobile {
+    gap: 6px;
+  }
+
+  .nav-left-mobile {
+    margin-right: 0;
+  }
+
+  .nav-appointment-mobile {
+    padding: 4px;
+  }
+
+  .hamburger-btn {
+    margin-right: 2px;
+  }
+}
+
+/* Mobile Dropdown Styles */
+.mobile-dropdown {
+  width: 100%;
+}
+
+.mobile-dropdown-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 15px 20px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.mobile-dropdown-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-arrow {
+  transition: transform 0.3s ease;
+  font-size: 12px;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.mobile-dropdown-content {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 10px 0;
+  animation: slideDown 0.3s ease-out;
+}
+
+.mobile-dropdown-section {
+  margin-bottom: 15px;
+}
+
+.mobile-dropdown-section h4 {
+  color: #8B4513;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-dropdown-content a {
+  display: block;
+  color: #ccc;
+  text-decoration: none;
+  padding: 8px 30px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.mobile-dropdown-content a:hover {
+  background-color: rgba(139, 69, 19, 0.3);
+  color: white;
+  padding-left: 35px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+/* Responsive adjustments for mobile navbar */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px 15px;
+  }
+  
+  .mobile-menu {
+    width: 100%;
+    max-width: none;
+  }
+  
+  .mobile-menu-links a,
+  .mobile-dropdown-toggle {
+    font-size: 14px;
+    padding: 12px 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 8px 10px;
+  }
+  
+  .logo img {
+    height: 35px;
+  }
+  
+  .mobile-menu-links a,
+  .mobile-dropdown-toggle {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+}
+@keyframes scale-fade {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-scale-fade {
+  animation: scale-fade 0.25s ease-out;
+}
+
+/* Mobile Slide Menu */
+.mobile-slide-menu {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 280px;
+  height: 100vh;
+  background: linear-gradient(135deg, #860a0c 0%, #a60f11 100%);
+  z-index: 1000;
+  transition: left 0.3s ease-in-out;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-slide-menu.open {
+  left: 0;
+}
+
+.mobile-menu-content {
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding-bottom: 30px;
+}
+
+.mobile-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobile-menu-header h3 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mobile-menu-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.mobile-menu-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu-links {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.mobile-menu-links a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.1rem;
+  font-weight: 400;
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.mobile-menu-links a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left-color: white;
+  transform: translateX(5px);
+}
+
+.mobile-menu-user {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mobile-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.mobile-user-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.mobile-user-details {
+  text-align: center;
+}
+
+.mobile-user-name {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+}
+
+.mobile-user-email {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.mobile-logout-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.mobile-logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.mobile-login-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  text-decoration: none;
+  font-size: 1.1rem;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.mobile-login-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* Add these styles to the bottom of your existing Navbar.css file
+*/
+
+/* --- Currency Toggle Button --- */
+.nav-currency-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px; /* Matches Jost font size */
+  font-weight: 500;
+  padding: 0 12px;
+  height: 36px;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin: 0 5px; /* Add some spacing */
+}
+
+.nav-currency-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* --- Admin Link --- */
+.admin-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px dashed rgba(255, 193, 7, 0.5); /* Use an amber color to stand out */
+  border-radius: 50%;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin: 0 5px;
+}
+
+.admin-link:hover {
+  background-color: rgba(255, 193, 7, 0.2);
+  transform: scale(1.1);
+}

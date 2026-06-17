@@ -1,0 +1,28 @@
+python-dotenv
+streamlit
+
+# web app framework
+fastapi
+uvicorn
+python-multipart
+requests
+
+
+# LangGraph + LangChain stack
+langgraph
+langchain
+langchain-community
+langchain-groq
+langchain-huggingface
+
+# Vector store
+chromadb
+
+# Embeddings (local & free)
+sentence-transformers
+huggingface-hub
+
+# Document loading
+pypdf
+unstructured
+markdown

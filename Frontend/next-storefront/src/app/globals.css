@@ -1,0 +1,298 @@
+@import "tailwindcss";
+
+@theme {
+  --color-shibumi-maroon: #7A0C13; /* Deepened slightly for a richer, luxurious feel */
+  --color-shibumi-pink: #F5E1E3;   /* Softened to a more elegant blush/cashmere pink */
+  --color-shibumi-brown: #8b6d4b;
+  --color-shibumi-black: #000000;
+  --color-shibumi-dark-gray: #333333;
+  --color-shibumi-medium-gray: #696969;
+  --color-shibumi-light-gray: #f7f7f7;
+  --color-shibumi-white: #ffffff;
+  --color-shibumi-accent-dark: #423d3f;
+  --color-shibumi-accent-warm: #b9a79e;
+  
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Libre Franklin", sans-serif;
+  --font-display: "Cormorant Garamond", serif;
+  --font-body: "Libre Franklin", sans-serif;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #f7f7f7;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #7A0C13;
+  --primary-foreground: #ffffff;
+  --secondary: #F5E1E3;
+  --secondary-foreground: #7A0C13;
+  --muted: #f7f7f7;
+  --muted-foreground: #696969;
+  --accent: #F5E1E3;
+  --accent-foreground: #7A0C13;
+  --destructive: #7A0C13;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #7A0C13;
+  --radius: 0px;
+}
+
+html {
+  scroll-behavior: auto !important;
+}
+
+body {
+  font-family: 'Libre Franklin', 'Jost', sans-serif;
+  font-weight: 300;
+  background-color: #ffffff;
+  color: #171717;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Lenis Recommended Styles */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Custom Scrollbar (Hidden for Premium Feel) */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Lenis Recommended Styles */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Custom Scrollbar (Hidden for Premium Feel) */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fix for Scroll Hang / Stuttering */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.font-serif {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+.font-sans {
+  font-family: 'Libre Franklin', sans-serif;
+}
+
+.parallax-bg {
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+}
+
+@media (max-width: 768px) {
+  .parallax-bg {
+    background-attachment: scroll;
+  }
+}
+
+.caveat-heading {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+.jost-heading {
+  font-family: 'Libre Franklin', sans-serif;
+  font-weight: 200;
+}
+
+.crimson-heading {
+  font-family: 'Cormorant Garamond', serif;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s ease forwards;
+}
+
+.animate-slide-left {
+  animation: slideLeft 0.6s ease forwards;
+}
+
+.card-hover {
+  transition: all 0.3s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+}
+
+.link-hover {
+  transition: all 0.4s ease-in-out;
+}
+
+.link-hover:hover {
+  transform: translateX(5px);
+  color: var(--color-shibumi-maroon);
+}
+
+.btn-hover {
+  transition: all 0.4s ease-in-out;
+}
+
+.btn-hover:hover {
+  opacity: 0.85;
+  transform: translateY(-2px);
+}
+
+.image-scale {
+  transition: transform 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+.image-scale:hover img {
+  transform: scale(1.1);
+}
+
+/* Temp2Design Utilities */
+.text-display {
+  font-size: clamp(4rem, 15vw, 12rem);
+  line-height: 0.85;
+  letter-spacing: -0.02em;
+}
+
+.text-headline {
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.text-subheadline {
+  font-size: clamp(1.1rem, 2vw, 1.75rem);
+  line-height: 1.3;
+}
+
+.ken-burns {
+  animation: kenBurns 20s ease-in-out infinite alternate;
+}
+
+@keyframes kenBurns {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.1) translate(-2%, -1%); }
+}
+
+.spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.transition-smooth {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fix for Razorpay UPI QR Code Blurriness */
+.razorpay-container * {
+  box-sizing: content-box !important;
+}
+.razorpay-container canvas,
+.razorpay-container img,
+.razorpay-container svg {
+  max-width: none !important;
+  display: block !important;
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: crisp-edges !important;
+  image-rendering: pixelated !important;
+}

@@ -1,0 +1,149 @@
+.shopmaterial_container {
+  padding: 60px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.shopmaterial_heading {
+  text-align: center;
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 3rem;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.slider_card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin: 0 10px;
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.slider_card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.card_image {
+  height: 60%;
+  overflow: hidden;
+  position: relative;
+}
+
+.card_image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.slider_card:hover .card_image img {
+  transform: scale(1.05);
+}
+
+.card_content {
+  padding: 20px;
+  height: 40%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card_content h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.card_content p {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 15px;
+  flex-grow: 1;
+}
+
+.shop_now {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #8B4513;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.arrow_icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease;
+}
+
+.slider_card:hover .arrow_icon {
+  transform: translateX(4px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .shopmaterial_container {
+    padding: 40px 15px;
+  }
+  
+  .shopmaterial_heading {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .slider_card {
+    height: 350px;
+    margin: 0 5px;
+  }
+  
+  .card_content {
+    padding: 15px;
+  }
+  
+  .card_content h3 {
+    font-size: 1.25rem;
+  }
+  
+  .card_content p {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .shopmaterial_heading {
+    font-size: 1.75rem;
+  }
+  
+  .slider_card {
+    height: 320px;
+  }
+  
+  .card_content {
+    padding: 12px;
+  }
+  
+  .card_content h3 {
+    font-size: 1.1rem;
+  }
+}
+
+/* Animation keyframes
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+} */
