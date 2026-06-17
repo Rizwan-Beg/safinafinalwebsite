@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
-import { toast } from 'sonner';
+import toast from "react-hot-toast";
 import { Calendar as CalendarIcon, Clock, Phone, User, Heart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -36,7 +36,8 @@ const BookAppointment = ({ onSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:9000/store/appointments", {
+      const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+      const response = await fetch(`${medusaUrl}/store/appointments`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

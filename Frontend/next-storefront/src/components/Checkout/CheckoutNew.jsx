@@ -109,7 +109,8 @@ const CheckoutNew = () => {
       }
 
       // Fetch the order_id from our new backend route
-      const orderRes = await fetch("http://localhost:9000/store/razorpay-order", {
+      const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+      const orderRes = await fetch(`${medusaUrl}/store/razorpay-order`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,7 +150,8 @@ const CheckoutNew = () => {
             setIsProcessing(true);
             // Step 2: Verify payment and create order on backend
             const token = getStoredToken();
-            const verifyRes = await fetch("http://localhost:9000/store/razorpay-verify", {
+            const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+            const verifyRes = await fetch(`${medusaUrl}/store/razorpay-verify`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
