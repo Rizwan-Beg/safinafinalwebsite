@@ -153,7 +153,7 @@ const Navbar = ({ onCartClick }) => {
 
         {/* Nav Left - Desktop Only */}
         <div className="nav-left large-screen">
-            <a href="http://localhost:8080/" className="nav-icon"><HiOutlineMapPin size={iconSize} color={iconColor} /></a>
+            <Link href="/locations" className="nav-icon"><HiOutlineMapPin size={iconSize} color={iconColor} /></Link>
             <Link href="/appointment" className="nav-appointment">
                 <HiOutlineCalendar size={iconSize} color={iconColor} /><p>BOOK AN APPOINTMENT</p>
             </Link>
@@ -207,7 +207,7 @@ const Navbar = ({ onCartClick }) => {
           {/* --- 5. ADDED CONDITIONAL ADMIN LINK --- */}
           {user && user.isAdmin && (
             <a 
-              href="http://localhost:8080" 
+              href={`${MEDUSA_URL}/app`}
               target="_blank" 
               rel="noopener noreferrer" 
               className="nav-icon admin-link" 

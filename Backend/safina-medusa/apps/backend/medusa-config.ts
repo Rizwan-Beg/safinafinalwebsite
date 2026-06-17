@@ -13,11 +13,6 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
   },
-  admin: {
-    disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
-    backendUrl: process.env.MEDUSA_BACKEND_URL,
-    outDir: ".medusa/server/public/admin",
-  },
   modules: [
     {
       resolve: "./src/modules/chatbot",

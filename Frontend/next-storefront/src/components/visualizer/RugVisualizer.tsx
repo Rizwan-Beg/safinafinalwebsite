@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, UploadCloud, Image as ImageIcon, Sparkles, CheckCircle2, Download, Search, Lightbulb, Lock } from "lucide-react";
 import Image from "next/image";
