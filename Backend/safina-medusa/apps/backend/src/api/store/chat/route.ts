@@ -53,7 +53,8 @@ export const POST = async (
 
   // 4. Forward to Python Bot (Bot Active)
   try {
-    const pythonRes = await fetch("http://localhost:8001/chat", {
+    const chatbotUrl = process.env.CHATBOT_URL || "http://localhost:8001";
+    const pythonRes = await fetch(`${chatbotUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
