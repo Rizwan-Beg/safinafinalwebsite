@@ -176,7 +176,8 @@ export default function RugVisualizer() {
       formData.append("room_image", roomImage);
       formData.append("rug_image", rugImage);
 
-      const response = await fetch("http://127.0.0.1:8000/place-rug/", { method: "POST", body: formData });
+      const visualizerUrl = process.env.NEXT_PUBLIC_VISUALIZER_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${visualizerUrl}/place-rug/`, { method: "POST", body: formData });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Request failed with status ${response.status}`);
@@ -188,7 +189,8 @@ export default function RugVisualizer() {
       // Save visualization to Medusa backend history
       if (user) {
          try {
-            await fetch("http://localhost:9000/store/visualizations", {
+            const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+            await fetch(`${medusaUrl}/store/visualizations`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
