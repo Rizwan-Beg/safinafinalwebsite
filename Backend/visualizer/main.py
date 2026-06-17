@@ -1,6 +1,6 @@
 import os
 import uuid
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -60,6 +60,7 @@ def root():
 
 @app.post("/place-rug/")
 async def place_rug(
+    request: Request,
     room_image: UploadFile = File(...),
     rug_image: UploadFile = File(...),
     rug_width_ft: float | None = Form(None),
@@ -105,7 +106,7 @@ async def place_rug(
                 filename = f"output_{uuid.uuid4().hex}.png"
                 gen_img.save(filename)
 
-                return JSONResponse({"image_url": f"http://127.0.0.1:8000/images/{filename}"})
+                return JSONResponse({"image_url": f"{request.base_url}images/{filename}"})
 
         return JSONResponse({"error": "No image generated"}, status_code=500)
 
