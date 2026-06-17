@@ -142,7 +142,7 @@ export const CartProvider = ({ children }) => {
       }
 
       setCart(result.cart);
-      toast.success(`${productToAdd.name || 'Item'} added to collection.`, toastOptions);
+      toast.success(`${productToAdd.name || 'Item'} added to collection.`, { id: toastId, duration: 4000, ...toastOptions });
       openCart();
     } catch (err) {
       console.error("Error adding to cart:", err);
