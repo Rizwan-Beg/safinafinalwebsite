@@ -29,10 +29,23 @@ app = FastAPI(
     version="1.1"
 )
 
+import os
+
+# Define allowed origins
+allowed_origins = [
+    "http://localhost:8090", 
+    "http://localhost:3000"
+]
+
+# Add Vercel domain from environment variables if it exists
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8090", "http://localhost:3000"],  # Frontend URL
+    allow_origins=allowed_origins,  # Dynamic Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
