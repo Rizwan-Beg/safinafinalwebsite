@@ -168,3 +168,4 @@ assert.strictEqual(updatedRugs[0].z, 7.2, "New anchor position applied");
 console.log("✅ Passed: Rug product identity, images, dimensions, and rotation are 100% preserved.");
 
 console.log("\n🎉 ALL IN-PROCESS UNIT TESTS COMPLETED SUCCESSFULLY!");
+

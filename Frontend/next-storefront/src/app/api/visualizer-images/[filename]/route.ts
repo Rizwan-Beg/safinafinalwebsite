@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 
 export async function GET(
   req: NextRequest,
@@ -12,31 +14,57 @@ export async function GET(
       return NextResponse.json({ error: "Invalid filename" }, { status: 400 });
     }
 
+    const contentType = filename.endsWith(".png") ? "image/png" : "image/jpeg";
+
+    // 1. Attempt to fetch from upstream FastAPI visualizer service if configured
     const visualizerUrl = process.env.VISUALIZER_API_URL || "http://localhost:8000";
     const upstreamUrl = `${visualizerUrl.replace(/\/$/, "")}/images/${filename}`;
 
-    const res = await fetch(upstreamUrl, {
-      signal: AbortSignal.timeout(15000),
-      cache: "no-store",
-    });
+    try {
+      const res = await fetch(upstreamUrl, {
+        signal: AbortSignal.timeout(3000),
+        cache: "no-store",
+      });
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "Visualizer image not found" }, { status: res.status });
+      if (res.ok) {
+        const upstreamContentType = res.headers.get("content-type") || contentType;
+        const arrayBuffer = await res.arrayBuffer();
+        return new NextResponse(arrayBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": upstreamContentType,
+            "Cache-Control": "public, max-age=3600, immutable",
+          },
+        });
+      }
+    } catch {
+      // Upstream service unreachable or timed out; fall through to local filesystem fallback
     }
 
-    const contentType = res.headers.get("content-type") || (filename.endsWith(".png") ? "image/png" : "image/jpeg");
-    const arrayBuffer = await res.arrayBuffer();
+    // 2. Resilient local filesystem fallback for development or shared volumes
+    const candidatePaths = [
+      path.resolve(process.cwd(), "../Backend/visualizer/generated_images", filename),
+      path.resolve(process.cwd(), "Backend/visualizer/generated_images", filename),
+      path.resolve(process.cwd(), "../../Backend/visualizer/generated_images", filename),
+    ];
 
-    return new NextResponse(arrayBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=3600, immutable",
-      },
-    });
+    for (const localPath of candidatePaths) {
+      if (fs.existsSync(localPath)) {
+        const fileBuffer = await fs.promises.readFile(localPath);
+        return new NextResponse(fileBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=3600, immutable",
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ error: "Visualizer image not found" }, { status: 404 });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to fetch image upstream";
+    const message = err instanceof Error ? err.message : "Failed to serve visualizer image";
     console.error("Visualizer image proxy error:", err);
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,4 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import crypto from "crypto";
+
+const execFileAsync = promisify(execFile);
+
+async function runLocalCliAnalysis(file: Blob, originalName: string) {
+  const candidateScripts = [
+    path.resolve(process.cwd(), "../Backend/visualizer/cli_analyze.py"),
+    path.resolve(process.cwd(), "Backend/visualizer/cli_analyze.py"),
+    path.resolve(process.cwd(), "../../Backend/visualizer/cli_analyze.py"),
+  ];
+
+  let scriptPath: string | null = null;
+  for (const p of candidateScripts) {
+    if (fs.existsSync(p)) {
+      scriptPath = p;
+      break;
+    }
+  }
+
+  if (!scriptPath) {
+    throw new Error("Local visualizer analysis script not found");
+  }
+
+  const tmpId = crypto.randomUUID();
+  const ext = path.extname(originalName) || ".jpg";
+  const tmpFilePath = path.join(os.tmpdir(), `room_upload_${tmpId}${ext}`);
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await fs.promises.writeFile(tmpFilePath, buffer);
+
+  try {
+    const { stdout } = await execFileAsync("python3", [scriptPath, tmpFilePath], {
+      maxBuffer: 15 * 1024 * 1024,
+      timeout: 45000,
+    });
+
+    const lines = stdout.trim().split("\n");
+    const lastLine = lines[lines.length - 1];
+    return JSON.parse(lastLine);
+  } finally {
+    try {
+      await fs.promises.unlink(tmpFilePath);
+    } catch {
+      // ignore tmp cleanup error
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,47 +69,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No room image provided" }, { status: 400 });
     }
 
+    const filename = file.name || "room.jpg";
     const visualizerUrl = process.env.VISUALIZER_API_URL || "http://localhost:8000";
     const endpoint = `${visualizerUrl.replace(/\/$/, "")}/api/analyze-room`;
 
-    // Forward multipart form data to FastAPI visualizer service
-    const upstreamForm = new FormData();
-    upstreamForm.append("room_image", file, file.name || "room.jpg");
+    let analysis: any = null;
 
-    let upstreamRes: Response;
+    // 1. Try forwarding to FastAPI visualizer service first
     try {
-      upstreamRes = await fetch(endpoint, {
+      const upstreamForm = new FormData();
+      upstreamForm.append("room_image", file, filename);
+
+      const upstreamRes = await fetch(endpoint, {
         method: "POST",
         body: upstreamForm,
         signal: AbortSignal.timeout(35000), // 35s timeout for AI inference
       });
-    } catch (networkErr: unknown) {
-      const isTimeout =
-        networkErr instanceof Error &&
-        (networkErr.name === "TimeoutError" || (networkErr as { code?: number }).code === 23);
-      console.error("FastAPI visualizer service unreachable:", networkErr);
-      return NextResponse.json(
-        {
-          error: isTimeout
-            ? "Room analysis timed out. The AI model is taking longer than expected."
-            : "The AI visualizer service is currently unavailable. Please verify the backend service is running.",
-        },
-        { status: 503 }
-      );
-    }
 
-    if (!upstreamRes.ok) {
-      let upstreamErr = "Upstream analysis failed";
-      try {
-        const errJson = await upstreamRes.json();
-        if (errJson?.error) upstreamErr = errJson.error;
-      } catch {
-        // ignore parse error
+      if (upstreamRes.ok) {
+        analysis = await upstreamRes.json();
+      } else {
+        console.warn(`Upstream FastAPI returned status ${upstreamRes.status}, falling back to local runner`);
       }
-      return NextResponse.json({ error: upstreamErr }, { status: upstreamRes.status });
+    } catch (networkErr: unknown) {
+      console.warn("FastAPI visualizer service unreachable, falling back to local CLI execution:", networkErr);
     }
 
-    const analysis = await upstreamRes.json();
+    // 2. Resilient fallback to local Python CLI runner if upstream was unreachable
+    if (!analysis) {
+      try {
+        analysis = await runLocalCliAnalysis(file, filename);
+      } catch (cliErr: unknown) {
+        console.error("Local visualizer CLI runner failed:", cliErr);
+        return NextResponse.json(
+          {
+            error: "The AI visualizer service is currently unavailable. Please verify the backend service is running.",
+          },
+          { status: 503 }
+        );
+      }
+    }
 
     // Securely rewrite image URLs to use the same-origin proxy
     // /images/mask_xxx.png -> /api/visualizer-images/mask_xxx.png
