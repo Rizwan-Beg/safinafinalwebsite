@@ -9,10 +9,21 @@ header {
   left: 0;
   width: 100%;
   z-index: 1000;
-  background-color: #860a0c;
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  will-change: transform;
+  transition: background-color 0.4s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease, backdrop-filter 0.4s ease;
+  will-change: transform, background-color;
+}
+
+header.is-transparent {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+header.is-solid {
+  background-color: #860a0c !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
 header.hide {

@@ -8,8 +8,8 @@ const aboutConfig = {
       tag: "Heritage",
       heading: "A Legacy Woven in Time",
       paragraphs: [
-        "The story of Kashmir Rugs began in 1985, when our founder embarked on a journey through the ancient cities of Iran, seeking out master weavers whose families had practiced their craft for generations.",
-        "From the royal workshops of Isfahan to the tribal villages of the Zagros Mountains, we built relationships with artisans who maintain techniques passed down through millennia. Today, we continue this mission of preservation and celebration.",
+        "The story of Safina Carpets began over four generations ago, preserving centuries of artisanal Mughal techniques passed down with reverence and passion.",
+        "From the master weaving workshops to global sanctuaries of design, we champion master artisans who maintain hand-knotting traditions unchanged for millennia. Today, we continue this sacred mission of preservation and celebration.",
       ],
       quote: "",
       attribution: "",
@@ -21,8 +21,8 @@ const aboutConfig = {
       tag: "Philosophy",
       heading: "Quality Without Compromise",
       paragraphs: [],
-      quote: "A genuine Persian rug is not merely a floor covering—it is a testament to human patience, artistry, and the enduring beauty of tradition.",
-      attribution: "-- Amir Kashani, Founder",
+      quote: "A genuine hand-knotted rug is not merely a floor covering—it is a testament to human patience, artistry, and the enduring beauty of tradition.",
+      attribution: "— Sayeed Beg, Founder",
       image: "/images/about-showroom.jpg",
       backgroundColor: "#f7f3ef",
       textColor: "#2c2420",
@@ -34,11 +34,11 @@ const contactConfig = {
   heading: "Begin Your Journey",
   description: "Whether you're seeking a specific piece, need design consultation, or simply wish to learn more about our collection, we invite you to connect with us.",
   locationLabel: "Showroom",
-  location: "745 Fifth Avenue, New York, NY 10151",
+  location: "Safina Carpets Atelier, New Delhi, India",
   emailLabel: "Email",
-  email: "concierge@kashmirrugs.com",
+  email: "concierge@safinacarpets.com",
   phoneLabel: "Phone",
-  phone: "+1 (212) 555-0187",
+  phone: "+91 98765 43210",
   formFields: {
     nameLabel: "Name",
     namePlaceholder: "Your full name",
@@ -80,17 +80,19 @@ const AboutSection = ({ id, image, contentBg, textColor, reverse, children }) =>
     <div
       ref={sectionRef}
       id={id}
-      className={`min-h-screen flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}
+      className={`min-h-[500px] flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'}`}
     >
       {/* Image Side */}
-      <div
-        className="w-full lg:w-3/5 h-[50vh] lg:h-auto min-h-[400px] bg-cover bg-top bg-fixed"
-        style={{ backgroundImage: `url(${image})` }}
-      />
+      <div className="w-full lg:w-3/5 min-h-[360px] lg:min-h-[600px] xl:min-h-[700px]">
+        <div
+          className="w-full h-full bg-cover bg-center bg-fixed bg-no-repeat"
+          style={{ backgroundImage: `url(${image})` }}
+        />
+      </div>
 
       {/* Content Side */}
       <div
-        className="w-full lg:w-2/5 flex items-center justify-center p-8 md:p-12 lg:p-16"
+        className="w-full lg:w-2/5 flex items-center justify-center p-8 md:p-12 lg:p-16 xl:p-24"
         style={{ backgroundColor: contentBg, color: textColor }}
       >
         <div
@@ -186,7 +188,7 @@ const BeginJourney = () => {
       <section
         id="contact"
         ref={contactRef}
-        className="relative min-h-screen flex items-center justify-center"
+        className="relative py-20 md:py-28 flex items-center justify-center overflow-hidden"
       >
         {/* Background Image */}
         <div
@@ -198,7 +200,7 @@ const BeginJourney = () => {
         <div className="absolute inset-0 bg-black/60" />
 
         {/* Content */}
-        <div className="relative z-10 w-full max-w-[1300px] mx-auto px-6 py-24">
+        <div className="relative z-10 w-full max-w-[1300px] mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-start justify-between gap-16">
             {/* Left Side - Info */}
             <div

@@ -38,7 +38,6 @@ export function getProductPrice(product, currency = "INR") {
     return { price: product.priceData.inr || 0, symbol: "₹" };
   }
   const raw = product?.price ?? product?.variants?.[0]?.calculated_price ?? 0;
-  const price =
-    typeof raw === "number" && raw > 10000 ? raw / 100 : Number(raw) || 0;
+  const price = Number(raw) || 0;
   return { price, symbol: currency === "USD" ? "$" : "₹" };
 }

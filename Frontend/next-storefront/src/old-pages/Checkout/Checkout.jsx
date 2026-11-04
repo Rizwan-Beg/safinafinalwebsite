@@ -114,7 +114,7 @@ const CheckOut = () => {
                   items: cartItems.map(item => ({
                     product: item.id || item.variant_id,
                     name: item.title,
-                    price: item.unit_price / 100,
+                    price: item.unit_price,
                     quantity: item.quantity,
                     image: item.thumbnail || ''
                   })),

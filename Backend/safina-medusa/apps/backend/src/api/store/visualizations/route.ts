@@ -23,3 +23,23 @@ export const POST = async (
     visualizer_result: result,
   })
 }
+
+export const GET = async (
+  req: MedusaRequest,
+  res: MedusaResponse
+) => {
+  const visualizerModuleService = req.scope.resolve(VISUALIZER_MODULE)
+  const customerId = req.query.customer_id as string
+
+  const filters: any = {}
+  if (customerId) {
+    filters.customer_id = customerId
+  }
+
+  const results = await visualizerModuleService.listVisualizerResults(filters)
+
+  res.json({
+    visualizations: results,
+  })
+}
+

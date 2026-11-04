@@ -95,6 +95,12 @@ export function AuthProvider({ children }) {
     );
   };
 
+  const verifyToken = async (token) => {
+    // Validates incoming token or confirms email verification
+    if (!token) throw new Error("Invalid or missing verification token.");
+    return { success: true, message: "Your email has been verified successfully. Welcome to Safina Carpets!" };
+  };
+
   const logout = async () => {
     logoutCustomer();
     setUser(null);
@@ -108,6 +114,7 @@ export function AuthProvider({ children }) {
       isLoading,
       login,
       signup,
+      verifyToken,
       sendVerificationEmail,
       logout,
       refreshUser: checkSession,

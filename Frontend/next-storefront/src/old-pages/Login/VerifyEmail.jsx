@@ -6,8 +6,8 @@ import { useRouter as useNavigate, useSearchParams } from "next/navigation";
 import { AuthContext } from "../../context/AuthContext"; // Adjust path if needed
 
 const VerifyEmail = () => {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const searchParams = useSearchParams();
+  const token = searchParams ? searchParams.get("token") : null;
   const { verifyToken } = useContext(AuthContext);
   
   const [status, setStatus] = useState("verifying"); // 'verifying', 'success', 'error'

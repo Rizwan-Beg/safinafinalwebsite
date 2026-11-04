@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: safina-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-medusa-safina}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./safina.sql:/docker-entrypoint-initdb.d/safina.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medusa-safina}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: safina-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  medusa:
+    build:
+      context: ./Backend/safina-medusa
+      dockerfile: Dockerfile
+    container_name: safina-medusa-backend
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-medusa-safina}
+      REDIS_URL: redis://redis:6379
+      PORT: 9000
+    env_file:
+      - ./Backend/safina-medusa/apps/backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  storefront:
+    build:
+      context: ./Frontend/next-storefront
+      dockerfile: Dockerfile
+    container_name: safina-storefront
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
+      NEXT_PUBLIC_BASE_URL: http://localhost:3000
+    depends_on:
+      - medusa
+
+  chatbot:
+    build:
+      context: ./Backend/chatbot
+      dockerfile: Dockerfile
+    container_name: safina-chatbot
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./Backend/chatbot/.env
+
+  visualizer:
+    build:
+      context: ./Backend/visualizer
+      dockerfile: Dockerfile
+    container_name: safina-visualizer
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - visualizer_images:/app/generated_images
+    env_file:
+      - ./Backend/visualizer/.env
+
+volumes:
+  postgres_data:
+  redis_data:
+  visualizer_images:

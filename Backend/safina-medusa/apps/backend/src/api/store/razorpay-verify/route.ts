@@ -24,21 +24,30 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     return res.status(400).json({ error: "cart_id is required" });
   }
 
+  if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+    return res.status(400).json({ 
+      error: "razorpay_payment_id, razorpay_order_id, and razorpay_signature are all strictly required" 
+    });
+  }
+
   // Step 1: Verify Razorpay payment signature (security check)
   const key_secret = process.env.RAZORPAY_KEY_SECRET;
-  if (key_secret && key_secret !== "ENTER_YOUR_SECRET_HERE" && razorpay_signature) {
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac("sha256", key_secret)
-      .update(body)
-      .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
-      console.error("❌ Razorpay signature mismatch! Possible fraud attempt.");
-      return res.status(400).json({ error: "Payment signature verification failed" });
-    }
-    console.log("✅ Razorpay signature verified");
+  if (!key_secret || key_secret === "ENTER_YOUR_SECRET_HERE") {
+    console.error("❌ RAZORPAY_KEY_SECRET is not configured on the server");
+    return res.status(500).json({ error: "Server payment configuration error" });
   }
+
+  const body = razorpay_order_id + "|" + razorpay_payment_id;
+  const expectedSignature = crypto
+    .createHmac("sha256", key_secret)
+    .update(body)
+    .digest("hex");
+
+  if (expectedSignature !== razorpay_signature) {
+    console.error("❌ Razorpay signature mismatch! Possible fraud attempt.");
+    return res.status(400).json({ error: "Payment signature verification failed" });
+  }
+  console.log("✅ Razorpay signature verified");
 
   try {
     // Step 2: Retrieve the cart with all necessary data
@@ -94,16 +103,17 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     // Ensure we have an email and it's the customer's email if possible
     let email = cart.email;
+    let customer: any = null;
     if (customerId) {
       try {
         const customerModule = req.scope.resolve(Modules.CUSTOMER);
-        const customer = await customerModule.retrieveCustomer(customerId);
+        customer = await customerModule.retrieveCustomer(customerId);
         if (customer?.email) {
           email = customer.email;
           console.log("📧 Using customer email:", email);
         }
       } catch (err) {
-        console.warn("Could not retrieve customer email:", err);
+        console.warn("Could not retrieve customer details:", err);
       }
     }
 
@@ -154,8 +164,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       postal_code: addr.postal_code || "000000",
       country_code: (addr.country_code || "in").toLowerCase(),
       phone: addr.phone || undefined,
-      first_name: addr.first_name || (customerId ? (await (req.scope.resolve(Modules.CUSTOMER)).retrieveCustomer(customerId)).first_name : "Customer"),
-      last_name: addr.last_name || (customerId ? (await (req.scope.resolve(Modules.CUSTOMER)).retrieveCustomer(customerId)).last_name : "Guest"),
+      first_name: addr.first_name || customer?.first_name || "Customer",
+      last_name: addr.last_name || customer?.last_name || "Guest",
     };
 
     console.log("📝 Building order with:", {

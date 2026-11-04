@@ -35,6 +35,10 @@ pnpm-debug.log*
 **/vectordb/
 **/chroma.sqlite3
 
+# Generated Visualizer Assets
+Backend/visualizer/generated_images/
+**/generated_images/
+
 # OS / IDE generated files
 .vscode/
 .idea/

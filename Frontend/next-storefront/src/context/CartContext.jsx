@@ -41,7 +41,7 @@ export const CartProvider = ({ children }) => {
     if (cartId) {
       try {
         const response = await fetch(`${baseUrl}/store/carts/${cartId}`, {
-          headers: { 'x-publishable-api-key': publishableKey }
+          headers: { 'x-publishable-api-key': publishableKey }, signal: AbortSignal.timeout(3000)
         });
         if (response.ok) {
           const { cart } = await response.json();
@@ -50,23 +50,47 @@ export const CartProvider = ({ children }) => {
         }
         throw new Error("Invalid cart");
       } catch (err) {
+        console.warn("Cart fetch failed, clearing local cart_id:", err);
         if (typeof window !== "undefined") localStorage.removeItem("cart_id");
       }
     }
 
-    const response = await fetch(`${baseUrl}/store/carts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-publishable-api-key': publishableKey,
-      },
-      body: JSON.stringify({ region_id: 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA' })
-    });
+    let regionId = null;
+    try {
+      const regRes = await fetch(`${baseUrl}/store/regions`, {
+        headers: { 'x-publishable-api-key': publishableKey }, signal: AbortSignal.timeout(3000)
+      });
+      if (regRes.ok) {
+        const { regions } = await regRes.json();
+        if (regions && regions.length > 0) {
+          regionId = regions[0].id;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch regions dynamically:", e);
+    }
 
-    const { cart: newCart } = await response.json();
-    if (typeof window !== "undefined") localStorage.setItem("cart_id", newCart.id);
-    setCart(newCart);
-    return newCart;
+    try {
+      const response = await fetch(`${baseUrl}/store/carts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': publishableKey,
+        },
+        body: JSON.stringify(regionId ? { region_id: regionId } : {}),
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (!response.ok) throw new Error("Failed to create cart");
+
+      const { cart: newCart } = await response.json();
+      if (typeof window !== "undefined") localStorage.setItem("cart_id", newCart.id);
+      setCart(newCart);
+      return newCart;
+    } catch (e) {
+      console.error("Critical error: Medusa backend unreachable. Cart functionality will be limited.", e);
+      return null;
+    }
   };
 
   useEffect(() => {

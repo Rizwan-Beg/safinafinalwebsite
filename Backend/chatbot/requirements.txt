@@ -1,6 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
-
 python-dotenv
 streamlit
 
@@ -9,6 +8,7 @@ fastapi
 uvicorn
 python-multipart
 requests
+slowapi
 
 
 # LangGraph + LangChain stack

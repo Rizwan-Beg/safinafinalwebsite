@@ -1,9 +1,12 @@
 #!/bin/bash
 
-echo "Starting all Safina Carpets servers (Vite Frontend + MedusaJS + AI Stack)..."
+echo "Starting all Safina Carpets servers (Next.js Storefront + MedusaJS + AI Stack)..."
 
 # Ensure we are in the script's directory
 cd "$(dirname "$0")"
+
+# Trap Ctrl+C (SIGINT) and SIGTERM to kill all spawned child processes
+trap 'echo "Stopping all Safina services..."; kill $(jobs -p) 2>/dev/null; exit' SIGINT SIGTERM EXIT
 
 # Start Medusa Backend (Port 9000 by default)
 echo "Starting Medusa.js Backend..."

@@ -1,13 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import Link from "next/link";
-import { ArrowRight, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowRight, Mail, Phone, MapPin, ChevronRight } from 'lucide-react';
 import { FaInstagram, FaFacebookF, FaTwitter } from 'react-icons/fa';
+import { CurrencyContext } from "../../context/CurrencyContext";
+import CountryLanguageModal from "../CountryLanguageSelector/CountryLanguageModal";
 import "./Footer.css";
 
 const Footer = () => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { selectedRegion, openSelector, closeSelector, isSelectorOpen } = useContext(CurrencyContext);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -19,25 +22,38 @@ const Footer = () => {
   };
 
   return (
-    <footer className="footer-main bg-[#FFE5E6] text-[#4a0807] pt-24 pb-12 border-t border-red-200">
+    <footer className="footer-main bg-[#FFE5E6] text-[#4a0807] pt-24 pb-12 border-t border-red-200 relative z-50">
       <div className="max-w-[1400px] mx-auto px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-16 mb-20">
           {/* Company Info */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-4 relative z-50">
             <h3 className="footer-logo font-serif text-3xl mb-8 tracking-wider text-[#4a0807]">SAFINA CARPETS</h3>
             <p className="footer-description text-[#4a0807] font-light text-base leading-relaxed mb-10 max-w-md">
               Crafting timeless elegance since generations. We preserve the heritage of Mughal-era artistry through premium handwoven rugs that tell a story of luxury and tradition.
             </p>
-            <div className="flex items-center gap-6 social-links">
-              <a href="#" className="social-icon group" aria-label="Instagram">
+            <div className="flex items-center gap-6 social-links mb-10">
+              <a href="https://instagram.com/safinacarpets" target="_blank" rel="noopener noreferrer" className="social-icon group" aria-label="Instagram">
                 <FaInstagram size={22} className="transition-transform group-hover:scale-110" />
               </a>
-              <a href="#" className="social-icon group" aria-label="Facebook">
+              <a href="https://facebook.com/safinacarpets" target="_blank" rel="noopener noreferrer" className="social-icon group" aria-label="Facebook">
                 <FaFacebookF size={22} className="transition-transform group-hover:scale-110" />
               </a>
-              <a href="#" className="social-icon group" aria-label="Twitter">
+              <a href="https://x.com/safinacarpets" target="_blank" rel="noopener noreferrer" className="social-icon group" aria-label="Twitter">
                 <FaTwitter size={22} className="transition-transform group-hover:scale-110" />
               </a>
+            </div>
+
+            {/* Region Selector */}
+            <div className="relative">
+              <CountryLanguageModal />
+              <button 
+                onClick={() => isSelectorOpen ? closeSelector() : openSelector()}
+                className="flex w-fit items-center gap-2 pb-1 text-[#4a0807] font-medium text-sm hover:opacity-70 transition-opacity border-b border-[#4a0807]/30"
+              >
+                <span className="text-lg drop-shadow-sm">{selectedRegion?.flag}</span>
+                <span className="tracking-wide">{selectedRegion?.name} | {selectedRegion?.symbol}</span>
+                <ChevronRight size={16} className={`opacity-50 ml-1 transition-transform ${isSelectorOpen ? '-rotate-90' : ''}`} />
+              </button>
             </div>
           </div>
 
@@ -94,11 +110,11 @@ const Footer = () => {
             <div className="space-y-5 text-sm font-light text-[#4a0807]">
               <div className="flex items-center gap-4 group cursor-pointer">
                 <MapPin size={18} className="text-[#4a0807]/60 group-hover:text-[#4a0807] transition-colors" />
-                <p className="group-hover:text-[#4a0807] transition-colors">2592 S. Beverly St, Suite 130, Boise, ID</p>
+                <p className="group-hover:text-[#4a0807] transition-colors">Safina Atelier & Heritage Center, Srinagar, J&K / Bhadohi, India</p>
               </div>
               <div className="flex items-center gap-4 group cursor-pointer">
                 <Phone size={18} className="text-[#4a0807]/60 group-hover:text-[#4a0807] transition-colors" />
-                <p className="group-hover:text-[#4a0807] transition-colors">+91 741XF GFSTW</p>
+                <a href="tel:+919811054321" className="group-hover:text-[#4a0807] transition-colors">+91 (0) 98110 54321</a>
               </div>
               <div className="flex items-center gap-4 group cursor-pointer">
                 <Mail size={18} className="text-[#4a0807]/60 group-hover:text-[#4a0807] transition-colors" />
@@ -110,7 +126,7 @@ const Footer = () => {
 
         {/* Bottom Section */}
         <div className="pt-12 border-t border-[#4a0807]/10 flex flex-col md:flex-row items-center justify-between gap-8">
-          <p className="text-[#4a0807]/40 text-[10px] uppercase tracking-[0.4em] font-medium">
+          <p className="text-[#4a0807]/40 text-[10px] uppercase tracking-[0.4em] font-medium text-center md:text-left">
             © {new Date().getFullYear()} SAFINA CARPETS. CRAFTED WITH PASSION.
           </p>
           <div className="flex items-center gap-10">

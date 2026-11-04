@@ -51,12 +51,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 # Serve generated images statically
-app.mount("/images", StaticFiles(directory="."), name="images")
+app.mount("/images", StaticFiles(directory=OUTPUT_DIR), name="images")
 
 @app.get("/")
 def root():
-    return {"message": "Safina Carpets Rug Visualizer API is running. Use POST /place-rug/."}
+    return {"message": "Safina Carpets Rug Visualizer API is running. Use POST /place-rug/ or POST /api/analyze-room."}
+
+@app.post("/api/analyze-room")
+async def analyze_room_endpoint(
+    request: Request,
+    room_image: UploadFile = File(...)
+):
+    """
+    AI Room Analysis endpoint for System A (Interactive Room Visualizer).
+    Performs semantic segmentation, floor horizon detection, furniture occlusion
+    mask generation, and intelligent anchor placement.
+    """
+    try:
+        from room_analyzer import analyze_room_image
+        content = await room_image.read()
+        analysis = analyze_room_image(content, str(request.base_url))
+        return JSONResponse(analysis)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.post("/place-rug/")
 async def place_rug(
@@ -104,7 +127,8 @@ async def place_rug(
 
                 # Save unique file
                 filename = f"output_{uuid.uuid4().hex}.png"
-                gen_img.save(filename)
+                filepath = os.path.join(OUTPUT_DIR, filename)
+                gen_img.save(filepath)
 
                 return JSONResponse({"image_url": f"{request.base_url}images/{filename}"})
 

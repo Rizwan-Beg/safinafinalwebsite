@@ -5,8 +5,27 @@ import MainLayoutClient from "../components/MainLayoutClient";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "Safina Carpets",
-  description: "Luxury Handmade Carpets",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000"),
+  title: {
+    template: "%s | Safina Carpets",
+    default: "Safina Carpets | Luxury Handmade Heritage Rugs",
+  },
+  description:
+    "Safina Carpets offers an exquisite collection of luxury hand-knotted rugs, crafted by generational artisans. Discover Persian, Oriental, and modern masterpieces.",
+  keywords: ["luxury carpets", "handmade rugs", "Persian rugs", "Oriental rugs", "Safina Carpets", "hand-knotted"],
+  openGraph: {
+    title: "Safina Carpets | Luxury Handmade Heritage Rugs",
+    description: "Discover an exquisite collection of luxury hand-knotted rugs, crafted by generational artisans.",
+    url: "/",
+    siteName: "Safina Carpets",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Safina Carpets | Luxury Handmade Heritage Rugs",
+    description: "Discover an exquisite collection of luxury hand-knotted rugs, crafted by generational artisans.",
+  },
 };
 
 export default function RootLayout({

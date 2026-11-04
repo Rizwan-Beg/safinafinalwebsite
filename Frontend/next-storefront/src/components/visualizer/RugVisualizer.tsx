@@ -105,7 +105,6 @@ export default function RugVisualizer() {
       factInterval = setInterval(() => {
         setFactIndex(prev => (prev + 1) % funFacts.length);
       }, 5000);
-      setCountdown(30);
       countdownInterval = setInterval(() => {
         setCountdown(prev => (prev > 0 ? prev - 1 : 0));
       }, 1000);
@@ -170,6 +169,7 @@ export default function RugVisualizer() {
       return;
     }
     setIsLoading(true);
+    setCountdown(30); // Reset countdown here
     setPreviewImage(null);
     try {
       const formData = new FormData();
@@ -186,7 +186,7 @@ export default function RugVisualizer() {
       const imageUrl = data.image_url;
       setPreviewImage(imageUrl);
       
-      // Save visualization to Medusa backend history
+      // Save visualization to Medusa backend history only if user is logged in
       if (user) {
          try {
             const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
@@ -219,40 +219,6 @@ export default function RugVisualizer() {
   const browseOurRugs = () => {
     router.push('/catalog');
   };
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#f7f7f7] font-sans pt-[130px] pb-20 flex items-center justify-center">
-        <motion.div 
-          className="bg-[#ffffff] border border-[#e5e7eb] shadow-xl p-12 text-center max-w-lg mx-auto"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="mx-auto w-16 h-16 bg-[#F5E1E3] rounded-full flex items-center justify-center mb-6">
-            <Lock className="text-[#7A0C13]" size={32} strokeWidth={1.5} />
-          </div>
-          <h2 className="text-3xl font-serif text-[#171717] mb-4">Members Exclusive</h2>
-          <p className="text-[#696969] text-base mb-8 font-light leading-relaxed">
-            Please log in or create an account to use our premium AI Rug Visualizer. This allows us to save your beautifully generated room setups for your future reference.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => router.push('/login')} 
-              className="bg-[#7A0C13] text-[#ffffff] px-8 py-3 text-sm tracking-widest uppercase font-sans hover:bg-[#171717] transition-colors"
-            >
-              Sign In
-            </button>
-            <button 
-              onClick={() => router.push('/login?tab=register')} 
-              className="bg-transparent text-[#171717] border border-[#171717] px-8 py-3 text-sm tracking-widest uppercase font-sans hover:bg-[#171717] hover:text-[#ffffff] transition-colors"
-            >
-              Create Account
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#f7f7f7] font-sans pb-20 pt-[130px]">
@@ -342,7 +308,7 @@ export default function RugVisualizer() {
                                 transition={{ duration: 0.5 }}
                                 className="text-[#333333] text-lg font-serif italic"
                             >
-                                "{funFacts[factIndex]}"
+                                &ldquo;{funFacts[factIndex]}&rdquo;
                             </motion.p>
                         </AnimatePresence>
                       </div>

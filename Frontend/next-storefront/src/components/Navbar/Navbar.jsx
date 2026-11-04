@@ -15,6 +15,7 @@ import {
 } from "react-icons/hi2";
 import "./Navbar.css";
 import logo from "../../assets/logo.jpg";
+import logoTransparent from "../../assets/logo_transparent.png";
 import "@fontsource/jost/300.css";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
@@ -22,7 +23,8 @@ import { WishlistContext } from "../../context/WishlistContext";
 import { CurrencyContext } from "../../context/CurrencyContext"; // 1. Import CurrencyContext
 import { Bell, Shield } from "lucide-react";
 import ProfileDropdown from "../profile/ProfileDropdown";
-// Appointment now uses a dedicated page at /appointment
+import RegionBanner from "../CountryLanguageSelector/RegionBanner";
+import { fetchCollections, fetchProductCategories, fetchProducts } from "../../services/productService";
 
 // --- FIX: The component needs to accept 'onCartClick' as a prop ---
 const Navbar = ({ onCartClick }) => {
@@ -30,7 +32,7 @@ const Navbar = ({ onCartClick }) => {
   const { cartCount } = useContext(CartContext);
   const { wishlistCount } = useContext(WishlistContext);
   // 3. Get currency state and setter from context
-  const { currency, setCurrency } = useContext(CurrencyContext);
+  const { selectedRegion, openSelector } = useContext(CurrencyContext);
   const location = useLocation();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +40,9 @@ const Navbar = ({ onCartClick }) => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownTimeoutRef = useRef(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [megaMenuData, setMegaMenuData] = useState({
+    sizes: [], colors: [], rooms: [], shapes: [], materials: [], constructions: [], patterns: []
+  });
 
   const handleMouseEnter = (menu) => {
     if (dropdownTimeoutRef.current) {
@@ -68,6 +73,65 @@ const Navbar = ({ onCartClick }) => {
         }
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const loadMegaMenu = async () => {
+      try {
+        const [collections, categories, products] = await Promise.all([
+          fetchCollections(),
+          fetchProductCategories(),
+          fetchProducts()
+        ]);
+
+        const sizes = collections.map(c => ({ name: c.title, handle: c.handle }));
+
+        // Categories mapped to Construction/Style
+        const constructions = categories
+          .filter(cat => !["shirts", "merch", "sweatshirts", "pants"].includes(cat.name.toLowerCase()))
+          .map(c => ({ name: c.name, handle: c.handle }));
+
+        // Extract metadata attributes from all active products
+        const colorsSet = new Set();
+        const roomsSet = new Set();
+        const shapesSet = new Set();
+        const materialsSet = new Set();
+        const patternsSet = new Set();
+
+        products.forEach(p => {
+          if (!p.metadata) return;
+          
+          if (p.metadata.material) materialsSet.add(p.metadata.material);
+          if (p.metadata.shape) shapesSet.add(p.metadata.shape);
+          if (p.metadata.pattern) patternsSet.add(p.metadata.pattern);
+          
+          if (p.metadata.colors && Array.isArray(p.metadata.colors)) {
+            p.metadata.colors.forEach(c => colorsSet.add(c));
+          } else if (p.metadata.color) {
+            colorsSet.add(p.metadata.color);
+          }
+
+          if (p.metadata.rooms && Array.isArray(p.metadata.rooms)) {
+            p.metadata.rooms.forEach(r => roomsSet.add(r));
+          }
+        });
+
+        const formatSet = (set) => Array.from(set).map(name => ({ name, handle: name.toLowerCase().replace(/\s+/g, '-') }));
+
+        setMegaMenuData({ 
+          sizes, 
+          constructions, 
+          colors: formatSet(colorsSet), 
+          rooms: formatSet(roomsSet), 
+          shapes: formatSet(shapesSet), 
+          materials: formatSet(materialsSet),
+          patterns: formatSet(patternsSet)
+        });
+      } catch (e) {
+        console.error("Failed to load mega menu data", e);
+      }
+    };
+    loadMegaMenu();
   }, []);
 
   const [mobilePoliciesOpen, setMobilePoliciesOpen] = useState(false);
@@ -127,10 +191,24 @@ const Navbar = ({ onCartClick }) => {
     setShowAnnouncement(false);
   };
 
-  const headerClass = showNavbar ? "show" : "hide";
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const checkScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", checkScroll, { passive: true });
+    checkScroll();
+    return () => window.removeEventListener("scroll", checkScroll);
+  }, []);
+
+  const isHomePage = location === "/";
+  const headerTransparencyClass = (isHomePage && !isScrolled) ? "is-transparent" : "is-solid";
+  const headerClass = `${showNavbar ? "show" : "hide"} ${headerTransparencyClass}`;
 
   return (
     <header className={headerClass}>
+      <RegionBanner />
       {/* Announcement Banner */}
       {showAnnouncement && announcementText && (
         <div className="announcement-banner">
@@ -153,9 +231,9 @@ const Navbar = ({ onCartClick }) => {
 
         {/* Nav Left - Desktop Only */}
         <div className="nav-left large-screen">
-            <Link href="/locations" className="nav-icon"><HiOutlineMapPin size={iconSize} color={iconColor} /></Link>
+            <Link href="/about" className="nav-icon" title="Our Atelier"><HiOutlineMapPin size={iconSize} color={iconColor} /></Link>
             <Link href="/appointment" className="nav-appointment">
-                <HiOutlineCalendar size={iconSize} color={iconColor} /><p>BOOK AN APPOINTMENT</p>
+                <HiOutlineCalendar size={iconSize} color={iconColor} /><p>PRIVATE RUG CONSULTATION</p>
             </Link>
         </div>
 
@@ -169,8 +247,8 @@ const Navbar = ({ onCartClick }) => {
         <div className="nav-center">
             <Link  href="/">
               <img 
-                src={typeof logo === 'string' ? logo : logo.src} 
-                alt="Logo" 
+                src={typeof logoTransparent === 'string' ? logoTransparent : logoTransparent.src} 
+                alt="Safina Carpets Logo" 
                 className="nav-logo" 
               />
             </Link>
@@ -194,15 +272,6 @@ const Navbar = ({ onCartClick }) => {
 
         {/* Desktop Right Icons */}
         <div className="nav-right large-screen">
-          
-          {/* --- 4. ADDED CURRENCY TOGGLE BUTTON --- */}
-          <button
-            onClick={() => setCurrency(currency === 'INR' ? 'USD' : 'INR')}
-            className="nav-icon nav-currency-toggle"
-            title="Change Currency"
-          >
-            {currency === 'INR' ? '₹' : '$'}
-          </button>
 
           {/* --- 5. ADDED CONDITIONAL ADMIN LINK --- */}
           {user && user.isAdmin && (
@@ -217,7 +286,7 @@ const Navbar = ({ onCartClick }) => {
             </a>
           )}
 
-          <Link  href="#" className="nav-icon"><HiOutlineMagnifyingGlass size={iconSize} color={iconColor} /></Link>
+          <Link href="/catalog" className="nav-icon" title="Search Catalog"><HiOutlineMagnifyingGlass size={iconSize} color={iconColor} /></Link>
           <Link  href="/wishlist" className="nav-icon relative">
             <HiOutlineHeart size={iconSize} color={iconColor} />
             {wishlistCount > 0 && <span className="absolute -top-1 -right-2 text-xs bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center">{wishlistCount}</span>}
@@ -287,43 +356,57 @@ const Navbar = ({ onCartClick }) => {
             <div className="mega-section">
               <h3>SIZE</h3>
               <ul>
-                <li><a href="/catalog?size=2x3ft">2X3 FT</a></li>
-                {/* ... all your other size links ... */}
-                <li><a href="/catalog?size=large">LARGE</a></li>
-                <li><a href="/catalog?size=oversize">OVERSIZE</a></li>
+                {megaMenuData.sizes.map((size, idx) => (
+                  <li key={idx}><a href={`/catalog?collection=${size.handle}`}>{size.name.toUpperCase()}</a></li>
+                ))}
               </ul>
             </div>
             <div className="mega-section">
               <h3>COLORS</h3>
               <ul>
-                {/* ... all your color links ... */}
-                <li><a href="/catalog?color=multi-color">MULTI COLOR</a></li>
+                {megaMenuData.colors.map((color, idx) => (
+                  <li key={idx}><a href={`/catalog?category=${color.handle}`}>{color.name.toUpperCase()}</a></li>
+                ))}
               </ul>
             </div>
             <div className="mega-section">
               <h3>ROOM</h3>
               <ul>
-                {/* ... all your room links ... */}
-                <li><a href="/catalog?room=outdoor-indoor">OUTDOOR/INDOOR</a></li>
+                {megaMenuData.rooms.map((room, idx) => (
+                  <li key={idx}><a href={`/catalog?category=${room.handle}`}>{room.name.toUpperCase()}</a></li>
+                ))}
               </ul>
-              <h3 style={{marginTop: '20px'}}>SHAPE</h3>
-              <ul>
-                {/* ... all your shape links ... */}
-                <li><a href="/catalog?shape=square">SQUARE</a></li>
-              </ul>
+              {megaMenuData.shapes.length > 0 && (
+                <>
+                  <h3 style={{marginTop: '20px'}}>SHAPE</h3>
+                  <ul>
+                    {megaMenuData.shapes.map((shape, idx) => (
+                      <li key={idx}><a href={`/catalog?category=${shape.handle}`}>{shape.name.toUpperCase()}</a></li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
             <div className="mega-section">
               <h3>MATERIAL</h3>
               <ul>
-                {/* ... all your material links ... */}
-                <li><a href="/catalog?material=bamboo-silk-zari">BAMBOO SILK AND ZARI</a></li>
+                {megaMenuData.materials.map((material, idx) => (
+                  <li key={idx}><a href={`/catalog?material=${material.handle}`}>{material.name.toUpperCase()}</a></li>
+                ))}
               </ul>
             </div>
             <div className="mega-section">
-              <h3>CONSTRUCTION</h3>
+              <h3>PATTERN</h3>
               <ul>
-                {/* ... all your construction links ... */}
-                <li><a href="/catalog?construction=shag">SHAG</a></li>
+                {megaMenuData.patterns.map((pattern, idx) => (
+                  <li key={idx}><a href={`/catalog?pattern=${pattern.handle}`}>{pattern.name.toUpperCase()}</a></li>
+                ))}
+              </ul>
+              <h3 style={{marginTop: '20px'}}>STYLE / CONSTRUCTION</h3>
+              <ul>
+                {megaMenuData.constructions.map((construction, idx) => (
+                  <li key={idx}><a href={`/catalog?category=${construction.handle}`}>{construction.name.toUpperCase()}</a></li>
+                ))}
               </ul>
             </div>
           </motion.div>

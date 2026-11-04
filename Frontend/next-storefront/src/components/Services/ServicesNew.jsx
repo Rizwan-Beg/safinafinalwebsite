@@ -436,7 +436,7 @@ const ServicesNew = () => {
 
         <ArtOfCreation />
         
-        <section className="py-24 md:py-32 lg:py-48 bg-[#FFF5F5]">
+        <section className="py-20 md:py-28 bg-[#FFF5F5]">
           <div className="max-w-7xl mx-auto px-6 md:px-8 lg:px-12">
             {services.map((service, index) => (
               <ZigZagServiceItem key={index} {...service} index={index} />
@@ -444,7 +444,7 @@ const ServicesNew = () => {
           </div>
         </section>
 
-        <section className="relative w-full py-40 bg-shibumi-maroon overflow-hidden text-center">
+        <section className="relative w-full py-24 md:py-28 bg-shibumi-maroon overflow-hidden text-center">
           <div className="max-w-4xl mx-auto px-6 relative z-10">
             <div className="flex justify-center mb-12">
               <div className="w-12 h-12 text-shibumi-pink/40">

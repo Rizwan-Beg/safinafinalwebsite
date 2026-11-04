@@ -48,7 +48,7 @@ const RugVisual = () => {
   };
 
   return (
-    <section className="relative min-h-screen py-24 flex items-center overflow-hidden">
+    <section className="relative py-20 md:py-28 flex items-center overflow-hidden">
       {/* Background with Parallax effect */}
       <div 
         className="absolute inset-0 z-0 bg-fixed bg-center bg-cover"

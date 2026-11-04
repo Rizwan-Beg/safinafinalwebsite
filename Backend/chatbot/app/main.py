@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
@@ -9,16 +9,22 @@ from app.graph import build_graph
 from app.ingest import build_index
 from app.config import CORS_ORIGINS, PORT
 import uvicorn
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 # Load environment variables from the .env file.
 load_dotenv() 
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Safina Carpets RAG Assistant", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS for your React app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,16 +51,9 @@ class ChatResponse(BaseModel):
 def health():
     return {"status": "ok"}
 
-# @app.post("/ingest")
-# def ingest():
-#     try:
-#         build_index()
-#         return {"status": "indexed"}
-#     except SystemExit as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
+@limiter.limit("20/minute")
+def chat(request: Request, req: ChatRequest):
     # Convert history to LangChain messages
     lc_history = []
     for t in (req.history or []):

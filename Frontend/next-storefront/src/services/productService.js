@@ -5,13 +5,16 @@ import { medusaClient } from "../lib/medusa";
  * that the original custom MongoDB backend used. This prevents having 
  * to rewrite every single UI component.
  */
-export const fetchProducts = async (regionId = 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA') => {
+export const fetchProducts = async (regionId = null) => {
   try {
-    const { products } = await medusaClient.products.list({
+    const listParams = {
       limit: 100,
-      region_id: regionId,
       fields: "*variants.calculated_price,*variants.prices"
-    });
+    };
+    if (regionId) {
+      listParams.region_id = regionId;
+    }
+    const { products } = await medusaClient.products.list(listParams);
 
     return products.map(product => {
       // Find default variant for pricing and id
@@ -65,7 +68,8 @@ export const fetchProducts = async (regionId = 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA')
         basePrice: basePriceInRupees,
         createdAt: product.created_at,
         variant_id: defaultVariant.id, 
-        variants: product.variants
+        variants: product.variants,
+        metadata: product.metadata
       };
     });
   } catch (error) {
@@ -74,12 +78,15 @@ export const fetchProducts = async (regionId = 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA')
   }
 };
 
-export const fetchProductById = async (id, regionId = 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA') => {
+export const fetchProductById = async (id, regionId = null) => {
   try {
-    const { product } = await medusaClient.products.retrieve(id, {
-      region_id: regionId,
+    const retrieveParams = {
       fields: "*variants.calculated_price,*variants.prices"
-    });
+    };
+    if (regionId) {
+      retrieveParams.region_id = regionId;
+    }
+    const { product } = await medusaClient.products.retrieve(id, retrieveParams);
     
     const defaultVariant = product.variants?.[0] || {};
     
@@ -112,12 +119,34 @@ export const fetchProductById = async (id, regionId = 'reg_01KRQKQ7G3BFCGV3NT7HT
       basePrice: basePriceInRupees,
       image: product.thumbnail,
       imageUrl: product.thumbnail,
+      images: product.images ? product.images.map(img => img.url) : [],
       category: product.type?.value || 'Carpets',
       description: product.description,
       variants: product.variants,
+      metadata: product.metadata,
     };
   } catch (error) {
     console.error("Error fetching product from Medusa:", error);
     throw error;
+  }
+};
+
+export const fetchCollections = async () => {
+  try {
+    const { collections } = await medusaClient.collections.list({ limit: 100 });
+    return collections;
+  } catch (error) {
+    console.error("Error fetching collections:", error);
+    return [];
+  }
+};
+
+export const fetchProductCategories = async () => {
+  try {
+    const { product_categories } = await medusaClient.productCategories.list({ limit: 100 });
+    return product_categories;
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    return [];
   }
 };

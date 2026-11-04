@@ -14,12 +14,19 @@ import {
   Award,
   Truck,
   ShieldCheck,
+  X,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
 import { CartContext } from "../../context/CartContext";
 import { WishlistContext } from "../../context/WishlistContext";
 import { AuthContext } from "../../context/AuthContext";
 import { CurrencyContext } from "../../context/CurrencyContext"; // 1. IMPORT THE NEW CONTEXT
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useMotionTemplate } from "framer-motion";
+import { getTransformedGalleryUrl } from "../../lib/cloudinary";
 
 // --- VISUALIZER MODAL REMOVED (Routed to Next.js page instead) ---
 
@@ -56,7 +63,7 @@ const AccordionItem = ({ title, content, isOpen, onClick }) => (
 );
 
 // --- MAIN PURCHASE PAGE COMPONENT (Modern Redesign) ---
-export const Purchase = () => {
+export const Purchase = ({ initialProduct = null }) => {
   const { productId } = useParams();
   const { addToCart, cartItems } = useContext(CartContext);
   const { addToWishlist, removeFromWishlist, isItemInWishlist } =
@@ -64,14 +71,41 @@ export const Purchase = () => {
   const { user } = useContext(AuthContext);
   const { getPrice } = useContext(CurrencyContext); // 2. USE THE CONTEXT
 
-  const [product, setProduct] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState("");
-  const [selectedSize, setSelectedSize] = useState("");
-  const [selectedColor, setSelectedColor] = useState("");
+  const [product, setProduct] = useState(() => {
+    if (!initialProduct) return null;
+    const stock = initialProduct.countInStock || 10;
+    return { ...initialProduct, countInStock: stock, initialCountInStock: stock };
+  });
+  const [isLoading, setIsLoading] = useState(!initialProduct);
+  const [selectedImage, setSelectedImage] = useState(() => {
+    if (!initialProduct) return "";
+    return initialProduct.images && initialProduct.images.length > 0
+      ? initialProduct.images[0]
+      : initialProduct.imageUrl || "";
+  });
+  const [selectedSize, setSelectedSize] = useState(initialProduct?.size || "Standard");
+  const [selectedColor, setSelectedColor] = useState(initialProduct?.color || "Default");
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isLightboxZoomed, setIsLightboxZoomed] = useState(false);
   const router = require('next/navigation').useRouter();
+
+  // Smooth Zoom state using Framer Motion physics
+  const springConfig = { damping: 30, stiffness: 100, mass: 0.5 };
+  
+  const mouseX = useMotionValue(50);
+  const mouseY = useMotionValue(50);
+  const smoothX = useSpring(mouseX, springConfig);
+  const smoothY = useSpring(mouseY, springConfig);
+  const transformOrigin = useMotionTemplate`${smoothX}% ${smoothY}%`;
+
+  const lbMouseX = useMotionValue(50);
+  const lbMouseY = useMotionValue(50);
+  const lbSmoothX = useSpring(lbMouseX, springConfig);
+  const lbSmoothY = useSpring(lbMouseY, springConfig);
+  const lbTransformOrigin = useMotionTemplate`${lbSmoothX}% ${lbSmoothY}%`;
 
   const toggleVisualizer = () => {
     router.push(`/visualizer?rugUrl=${encodeURIComponent(selectedImage)}`);
@@ -80,6 +114,12 @@ export const Purchase = () => {
     setOpenAccordion(openAccordion === index ? null : index);
 
   useEffect(() => {
+    // If product was already preloaded via SSR for this productId, skip redundant client fetch
+    if (initialProduct && (initialProduct.id === productId || initialProduct._id === productId)) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
@@ -109,7 +149,7 @@ export const Purchase = () => {
     };
     fetchProduct();
     window.scrollTo(0, 0);
-  }, [productId]);
+  }, [productId, initialProduct]);
 
   useEffect(() => {
     if (product?.initialCountInStock !== undefined) {
@@ -151,6 +191,51 @@ export const Purchase = () => {
       : addToWishlist(product.id);
   };
 
+  const handleMouseMove = (e) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(50);
+    mouseY.set(50);
+  };
+
+  // LIGHTBOX LOGIC
+  const openLightbox = () => {
+    const imagesArray = product.images?.length > 0 ? product.images : [product.imageUrl];
+    const currentIndex = imagesArray.indexOf(selectedImage) !== -1 ? imagesArray.indexOf(selectedImage) : 0;
+    setLightboxIndex(currentIndex);
+    setIsLightboxZoomed(false);
+    setIsLightboxOpen(true);
+  };
+
+  const nextLightboxImage = (e) => {
+    e.stopPropagation();
+    setIsLightboxZoomed(false);
+    const imagesArray = product.images?.length > 0 ? product.images : [product.imageUrl];
+    setLightboxIndex((prev) => (prev + 1) % imagesArray.length);
+  };
+
+  const prevLightboxImage = (e) => {
+    e.stopPropagation();
+    setIsLightboxZoomed(false);
+    const imagesArray = product.images?.length > 0 ? product.images : [product.imageUrl];
+    setLightboxIndex((prev) => (prev - 1 + imagesArray.length) % imagesArray.length);
+  };
+
+  const handleLightboxMouseMove = (e) => {
+    if (!isLightboxZoomed) return;
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    lbMouseX.set(x);
+    lbMouseY.set(y);
+  };
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-screen font-semibold text-lg text-gray-600">
@@ -170,6 +255,7 @@ export const Purchase = () => {
     product.specifications?.sizeOptions || [product.size].filter(Boolean);
   const colors =
     product.specifications?.colorOptions || [product.color].filter(Boolean);
+  const sizeLabel = selectedSize || product.size || (sizes.length > 0 ? sizes[0] : null);
   const availableStockForAdding = product.countInStock;
   const isLowStock =
     availableStockForAdding > 0 && availableStockForAdding <= 10;
@@ -197,8 +283,34 @@ export const Purchase = () => {
 
   return (
     <>
-      <div className="bg-white pt-[130px]">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8  ">
+      <div className="bg-white pt-36 md:pt-40 pb-24 md:pb-32">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Breadcrumb Navigation */}
+          <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2.5 font-body text-[10px] uppercase tracking-[0.2em] text-shibumi-dark-gray/60 overflow-x-auto whitespace-nowrap scrollbar-hide py-1">
+            <Link href="/" className="hover:text-shibumi-maroon transition-colors">
+              Home
+            </Link>
+            <span className="text-shibumi-black/20">/</span>
+            <Link href="/catalog" className="hover:text-shibumi-maroon transition-colors">
+              Rugs
+            </Link>
+            {sizeLabel && (
+              <>
+                <span className="text-shibumi-black/20">/</span>
+                <Link 
+                  href={`/catalog?size=${encodeURIComponent(sizeLabel)}`} 
+                  className="hover:text-shibumi-maroon transition-colors"
+                >
+                  {sizeLabel}
+                </Link>
+              </>
+            )}
+            <span className="text-shibumi-black/20">/</span>
+            <span className="text-shibumi-black font-semibold truncate max-w-[240px] sm:max-w-md">
+              {product.name}
+            </span>
+          </nav>
+
           <motion.div
             className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start"
             initial="hidden"
@@ -214,7 +326,7 @@ export const Purchase = () => {
                 hidden: { opacity: 0, x: -20 },
                 visible: { opacity: 1, x: 0 },
               }}
-              className="lg:sticky top-24 self-start flex gap-4 items-start"
+              className="lg:sticky top-36 self-start flex gap-4 items-start"
             >
               {/* Thumbnails - Vertical */}
               <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
@@ -229,7 +341,7 @@ export const Purchase = () => {
                     }`}
                   >
                     <img
-                      src={img}
+                      src={getTransformedGalleryUrl(img)}
                       alt={`Thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
@@ -238,22 +350,33 @@ export const Purchase = () => {
               </div>
 
               {/* Main Image with Magnify Effect */}
-              <div className="relative aspect-[3/4] bg-shibumi-light-gray rounded-none overflow-hidden border border-shibumi-black/5 flex-1 group cursor-zoom-in">
+              <div 
+                className="relative aspect-[3/4] bg-shibumi-light-gray rounded-none overflow-hidden border border-shibumi-black/5 flex-1 group cursor-zoom-in"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                onClick={openLightbox}
+              >
                 {isOutOfStock && (
                   <div className="absolute top-6 left-6 bg-shibumi-black text-white text-[10px] font-body uppercase tracking-widest py-2 px-4 rounded-none z-10">
                     Out of Stock
                   </div>
                 )}
+                
+                {/* Expand icon helper */}
+                <div className="absolute top-6 right-6 bg-white/80 backdrop-blur p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 text-shibumi-black shadow-sm pointer-events-none">
+                  <Maximize2 size={16} />
+                </div>
 
                 <AnimatePresence>
                   <motion.img
                     key={selectedImage}
-                    src={selectedImage}
+                    src={getTransformedGalleryUrl(selectedImage)}
                     alt={product.name}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-125 group-hover:cursor-zoom-in"
+                    style={{ transformOrigin }}
+                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.5] group-hover:cursor-zoom-in"
                   />
                 </AnimatePresence>
               </div>
@@ -391,6 +514,94 @@ export const Purchase = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* LIGHTBOX MODAL */}
+      <AnimatePresence>
+        {isLightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center p-4 md:p-12 backdrop-blur-md"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            {/* Top Right Controls */}
+            <div className="absolute top-6 right-6 md:top-10 md:right-10 flex gap-4 z-50">
+              <button 
+                className="text-white/70 hover:text-white transition-colors p-3 bg-black/40 rounded-full hover:bg-black/80"
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setIsLightboxZoomed(!isLightboxZoomed); 
+                  if (isLightboxZoomed) {
+                    lbMouseX.set(50);
+                    lbMouseY.set(50);
+                  }
+                }}
+              >
+                {isLightboxZoomed ? <ZoomOut size={24} /> : <ZoomIn size={24} />}
+              </button>
+              <button 
+                className="text-white/70 hover:text-white transition-colors p-3 bg-black/40 rounded-full hover:bg-black/80"
+                onClick={(e) => { e.stopPropagation(); setIsLightboxOpen(false); }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Slider Controls */}
+            {images.length > 1 && (
+              <>
+                <button 
+                  className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors p-4 z-50 hover:bg-white/10 rounded-full"
+                  onClick={prevLightboxImage}
+                >
+                  <ChevronLeft size={40} />
+                </button>
+                <button 
+                  className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors p-4 z-50 hover:bg-white/10 rounded-full"
+                  onClick={nextLightboxImage}
+                >
+                  <ChevronRight size={40} />
+                </button>
+                
+                {/* Image Counter */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/60 font-body tracking-widest text-sm z-50 bg-black/40 px-4 py-2 rounded-full">
+                  {lightboxIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
+            
+            {/* Image Container */}
+            <div 
+              className={`relative w-full h-full flex items-center justify-center overflow-hidden ${isLightboxZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+              onMouseMove={handleLightboxMouseMove}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsLightboxZoomed(!isLightboxZoomed);
+                if (isLightboxZoomed) {
+                  lbMouseX.set(50);
+                  lbMouseY.set(50);
+                }
+              }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={lightboxIndex}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ type: "tween", duration: 0.2 }}
+                  src={getTransformedGalleryUrl(images[lightboxIndex])}
+                  alt={`${product.name} gallery image`}
+                  style={{ transformOrigin: isLightboxZoomed ? lbTransformOrigin : "50% 50%" }}
+                  className={`max-w-full max-h-full object-contain shadow-2xl transition-transform duration-500 ease-out ${isLightboxZoomed ? 'scale-[2.5]' : 'scale-100'}`}
+                />
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

@@ -6,7 +6,7 @@ import { getCustomerOrders } from "../../lib/medusa-auth";
 import { ShoppingBag, ChevronDown, ArrowRight } from "lucide-react";
 
 function formatMoney(amount, currencyCode = "inr") {
-  const value = typeof amount === "number" ? amount / 100 : 0;
+  const value = typeof amount === "number" ? amount : 0;
   const code = (currencyCode || "inr").toUpperCase();
   try {
     return new Intl.NumberFormat("en-IN", {

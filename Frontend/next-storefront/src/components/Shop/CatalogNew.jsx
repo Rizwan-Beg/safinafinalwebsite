@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useContext, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Heart, ShoppingBag, X, SlidersHorizontal, Search, Maximize2, ChevronDown } from "lucide-react";
+import { Heart, ShoppingBag, X, SlidersHorizontal, Search, Maximize2, ChevronDown, Check } from "lucide-react";
 import { CartContext } from "../../context/CartContext";
 import { WishlistContext } from "../../context/WishlistContext";
 import { AuthContext } from "../../context/AuthContext";
@@ -12,10 +12,55 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 
 import Image from "next/image";
+import { getTransformedThumbnailUrl } from "../../lib/cloudinary";
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
+
+const PRICE_BRACKETS = [
+    { label: "Under ₹15,000", min: 0, max: 15000 },
+    { label: "₹15,000 - ₹50,000", min: 15000, max: 50000 },
+    { label: "₹50,000 - ₹1,00,000", min: 50000, max: 100000 },
+    { label: "Over ₹1,00,000", min: 100000, max: Infinity }
+];
+
+const FilterSection = ({ title, options, selectedValues = [], onChange }) => {
+    const [expanded, setExpanded] = useState(false);
+    
+    if (!options || options.length === 0) return null;
+    
+    const displayOptions = expanded ? options : options.slice(0, 5);
+    
+    return (
+        <div className="space-y-6">
+            <h3 className="font-body text-[10px] uppercase tracking-[0.3em] text-shibumi-black/40 border-b border-shibumi-black/5 pb-4">{title}</h3>
+            <div className="flex flex-col gap-3">
+                {displayOptions.map(option => (
+                    <label key={option.name} className="flex items-center gap-3 cursor-pointer group">
+                        <div className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedValues.includes(option.name) ? 'bg-shibumi-maroon border-shibumi-maroon' : 'border-shibumi-black/20 group-hover:border-shibumi-black'}`}>
+                            {selectedValues.includes(option.name) && <Check size={12} className="text-white" />}
+                        </div>
+                        <input 
+                            type="checkbox" 
+                            className="hidden" 
+                            checked={selectedValues.includes(option.name)}
+                            onChange={() => onChange(option.name)}
+                        />
+                        <span className={`font-body text-[10px] uppercase tracking-widest ${selectedValues.includes(option.name) ? 'text-shibumi-black font-semibold' : 'text-shibumi-black/60 group-hover:text-shibumi-black'}`}>
+                            {option.name} <span className="text-shibumi-black/30">({option.count})</span>
+                        </span>
+                    </label>
+                ))}
+            </div>
+            {options.length > 5 && (
+                <button onClick={() => setExpanded(!expanded)} className="text-shibumi-maroon font-body text-[10px] uppercase tracking-widest hover:underline text-left mt-2 block transition-all">
+                    {expanded ? 'Show Less' : 'Load More'}
+                </button>
+            )}
+        </div>
+    );
+};
 
 const ProductCard = ({ product, handleWishlistToggle, addToCart, isItemInWishlist }) => {
     const { getPrice } = useContext(CurrencyContext); 
@@ -58,7 +103,7 @@ const ProductCard = ({ product, handleWishlistToggle, addToCart, isItemInWishlis
             
             <Link href={`/purchase/${product._id}`} className="block relative aspect-[3/4] overflow-hidden bg-shibumi-light-gray">
                 <Image
-                    src={product.imageUrl}
+                    src={getTransformedThumbnailUrl(product.imageUrl)}
                     alt={product.name}
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -93,7 +138,7 @@ const ProductCard = ({ product, handleWishlistToggle, addToCart, isItemInWishlis
                 <div className="flex items-center text-[10px] uppercase tracking-widest text-shibumi-dark-gray/40">
                     <span>{product.size}</span>
                     <span className="mx-3 w-1 h-1 bg-shibumi-maroon/20 rounded-full"></span>
-                    <span>{product.material}</span>
+                    <span>{product.metadata?.material || product.material}</span>
                 </div>
             </div>
         </motion.div>
@@ -107,7 +152,7 @@ const CatalogNew = () => {
     const [sortBy, setSortBy] = useState("default");
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
     const [availableFilters, setAvailableFilters] = useState({
-        category: [], material: [], color: [], size: [],
+        size: [], color: [], price: [], shape: [], pattern: [], material: [], category: []
     });
 
     const searchParams = useSearchParams();
@@ -120,16 +165,59 @@ const CatalogNew = () => {
         const fetchAllProducts = async () => {
             try {
                 const { fetchProducts } = await import('../../services/productService');
-                // Use India region for pricing context
                 const data = await fetchProducts('reg_01KRQKQ7G3BFCGV3NT7HT91ZJA');
                 setAllProducts(data);
                 
-                const categories = [...new Set(data.map(p => p.category).filter(Boolean))];
-                const materials = [...new Set(data.map(p => p.material).filter(Boolean))];
-                const colors = [...new Set(data.flatMap(p => p.color ? p.color.split(' / ') : []).filter(Boolean))];
-                const sizes = [...new Set(data.map(p => p.size).filter(Boolean))];
+                const counts = { category: {}, material: {}, color: {}, size: {}, shape: {}, pattern: {}, price: {} };
 
-                setAvailableFilters({ category: categories, material: materials, color: colors, size: sizes });
+                data.forEach(p => {
+                    try {
+                        if (p?.category) counts.category[p.category] = (counts.category[p.category] || 0) + 1;
+                        
+                        const mat = p?.metadata?.material || p?.material;
+                        if (mat) counts.material[mat] = (counts.material[mat] || 0) + 1;
+                        
+                        if (p?.size) counts.size[p.size] = (counts.size[p.size] || 0) + 1;
+                        
+                        const shape = p?.metadata?.shape;
+                        if (shape && typeof shape === 'string') counts.shape[shape] = (counts.shape[shape] || 0) + 1;
+                        
+                        const pattern = p?.metadata?.pattern;
+                        if (pattern && typeof pattern === 'string') counts.pattern[pattern] = (counts.pattern[pattern] || 0) + 1;
+                        
+                        let colorsRaw = p?.metadata?.colors || p?.metadata?.color || p?.color;
+                        let colorsArray = [];
+                        if (Array.isArray(colorsRaw)) {
+                            colorsArray = colorsRaw;
+                        } else if (typeof colorsRaw === 'string') {
+                            colorsArray = colorsRaw.split(/[,/]+/).map(s => s.trim());
+                        }
+                        
+                        colorsArray.forEach(c => {
+                            if (c) counts.color[c] = (counts.color[c] || 0) + 1;
+                        });
+                        
+                        PRICE_BRACKETS.forEach(bracket => {
+                            if (p?.price >= bracket.min && p?.price < bracket.max) {
+                                counts.price[bracket.label] = (counts.price[bracket.label] || 0) + 1;
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Error parsing product filters:", p, e);
+                    }
+                });
+
+                const formatOptions = (countObj) => Object.entries(countObj).map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+
+                setAvailableFilters({ 
+                    size: formatOptions(counts.size), 
+                    color: formatOptions(counts.color),
+                    price: PRICE_BRACKETS.filter(b => counts.price[b.label]).map(b => ({ name: b.label, count: counts.price[b.label] })),
+                    shape: formatOptions(counts.shape),
+                    pattern: formatOptions(counts.pattern),
+                    material: formatOptions(counts.material), 
+                    category: formatOptions(counts.category)
+                });
             } catch (err) {
                 console.error("Error fetching products:", err);
             } finally {
@@ -146,7 +234,7 @@ const CatalogNew = () => {
         if (searchParams) {
             for (let [key, value] of searchParams.entries()) {
                 if (key === 'sort') urlSortBy = value;
-                else urlFilters[key] = value;
+                else urlFilters[key] = value.split(',').filter(Boolean);
             }
         }
         
@@ -156,33 +244,75 @@ const CatalogNew = () => {
 
     const filteredAndSortedProducts = useMemo(() => {
         let filtered = [...allProducts];
-        Object.entries(filters).forEach(([key, value]) => {
-            filtered = filtered.filter(product => 
-                product[key]?.toString().toLowerCase().includes(value.toLowerCase())
-            );
+        Object.entries(filters).forEach(([key, values]) => {
+            if (!values || values.length === 0) return;
+            
+            filtered = filtered.filter(product => {
+                if (key === 'price') {
+                    return values.some(val => {
+                        const bracket = PRICE_BRACKETS.find(b => b.label === val);
+                        return bracket && product.price >= bracket.min && product.price < bracket.max;
+                    });
+                }
+                
+                let productValues = [];
+                if (key === 'color') {
+                    let colorsRaw = product?.metadata?.colors || product?.metadata?.color || product?.color;
+                    if (Array.isArray(colorsRaw)) {
+                        productValues = colorsRaw;
+                    } else if (typeof colorsRaw === 'string') {
+                        productValues = colorsRaw.split(/[,/]+/).map(s => s.trim());
+                    }
+                } else if (['shape', 'pattern', 'material'].includes(key)) {
+                     productValues = [product?.metadata?.[key] || product?.[key]];
+                } else {
+                     productValues = [product?.[key]];
+                }
+                
+                return values.some(v => productValues.some(pv => pv?.toString().toLowerCase() === v.toLowerCase()));
+            });
         });
         
         if (sortBy === 'newest') filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         else if (sortBy === 'price-asc') filtered.sort((a, b) => a.price - b.price);
         else if (sortBy === 'price-desc') filtered.sort((a, b) => b.price - a.price);
         else if (sortBy === 'name-asc') filtered.sort((a, b) => a.name.localeCompare(b.name));
+        else if (sortBy === 'discounted') {
+            filtered = filtered.filter(p => {
+                if (p.variants && p.variants[0]) {
+                    const variant = p.variants[0];
+                    return variant.original_price && variant.calculated_price && variant.original_price > variant.calculated_price;
+                }
+                return false;
+            });
+        }
         
         return filtered;
     }, [allProducts, filters, sortBy]);
 
     const handleFilterChange = (key, value) => {
         const newFilters = { ...filters };
-        if (value) newFilters[key] = value;
+        let current = newFilters[key] || [];
+        if (current.includes(value)) {
+            current = current.filter(v => v !== value);
+        } else {
+            current = [...current, value];
+        }
+        
+        if (current.length > 0) newFilters[key] = current;
         else delete newFilters[key];
         
-        const params = new URLSearchParams(newFilters);
+        const params = new URLSearchParams();
+        Object.entries(newFilters).forEach(([k, v]) => params.set(k, v.join(',')));
         if (sortBy !== 'default') params.set('sort', sortBy);
+        
         router.push(`?${params.toString()}`);
     };
 
     const handleSortChange = (value) => {
         setSortBy(value);
-        const params = new URLSearchParams(filters);
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => params.set(k, v.join(',')));
         if (value !== 'default') params.set('sort', value);
         router.push(`?${params.toString()}`);
     };
@@ -197,40 +327,56 @@ const CatalogNew = () => {
         isItemInWishlist(product._id) ? removeFromWishlist(product._id) : addToWishlist(product);
     };
 
+    const FILTER_SECTIONS = [
+        { title: "Size (Ft.)", key: "size" },
+        { title: "Color", key: "color" },
+        { title: "Price Range", key: "price" },
+        { title: "Shape", key: "shape" },
+        { title: "Pattern", key: "pattern" },
+        { title: "Material", key: "material" },
+        { title: "Construction", key: "category" }
+    ];
+
     return (
-        <main className="bg-shibumi-white min-h-screen pt-32 pb-32">
-            <div className="max-w-7xl mx-auto px-6 md:px-12">
-                
+        <main className="bg-shibumi-white min-h-screen pt-36 md:pt-44 pb-24 md:pb-32">
+            <div className="max-w-[1400px] mx-auto px-6 md:px-12">
+                {/* Atelier Catalog Header */}
+                <div className="text-center max-w-3xl mx-auto mb-12 md:mb-16 space-y-4">
+                    <span className="font-body text-[10px] uppercase tracking-[0.4em] text-shibumi-maroon">
+                        The Atelier Collection
+                    </span>
+                    <h1 className="font-display text-4xl md:text-6xl text-shibumi-black tracking-tight leading-tight">
+                        Curated <span className="italic">Masterpieces</span>
+                    </h1>
+                    <p className="font-body text-xs md:text-sm text-shibumi-dark-gray/60 tracking-wider max-w-lg mx-auto leading-relaxed">
+                        Hand-knotted with generational expertise, 100% natural organic dyes, and timeless Mughal artistry.
+                    </p>
+                </div>
 
-
-                <div className="flex flex-col lg:flex-row gap-16">
-                    {/* Desktop Sidebar */}
-                    <aside className="hidden lg:block w-64 space-y-12 sticky top-32 h-fit">
-                        {Object.entries(availableFilters).map(([key, options]) => (
-                            options.length > 0 && (
-                                <div key={key} className="space-y-6">
-                                    <h3 className="font-body text-[10px] uppercase tracking-[0.3em] text-shibumi-black/40 border-b border-shibumi-black/5 pb-4">{key}</h3>
-                                    <div className="flex flex-col gap-3">
-                                        {options.map(option => (
-                                            <button 
-                                                key={option} 
-                                                onClick={() => handleFilterChange(key, filters[key] === option ? '' : option)}
-                                                className={`text-left font-body text-[10px] uppercase tracking-widest transition-all hover:translate-x-1 ${filters[key] === option ? 'text-shibumi-maroon font-semibold' : 'text-shibumi-black/60 hover:text-shibumi-black'}`}
-                                            >
-                                                {option}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )
+                <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
+                    {/* Desktop Sidebar (Narrower for wider grid) */}
+                    <aside className="hidden lg:block w-56 space-y-12 sticky top-36 h-[calc(100vh-10rem)] pb-12 overflow-y-auto pr-4 custom-scrollbar">
+                        <div className="flex justify-between items-center pb-4 border-b border-shibumi-black/10">
+                            <h2 className="font-body text-[10px] uppercase tracking-[0.3em] font-semibold text-shibumi-black">Filter By</h2>
+                            {Object.keys(filters).length > 0 && (
+                                <button onClick={clearFilters} className="text-[10px] uppercase tracking-widest text-shibumi-maroon hover:underline">
+                                    Clear All
+                                </button>
+                            )}
+                        </div>
+                        {FILTER_SECTIONS.map(({ title, key }) => (
+                            <FilterSection 
+                                key={key}
+                                title={title}
+                                options={availableFilters[key]}
+                                selectedValues={filters[key]}
+                                onChange={(val) => handleFilterChange(key, val)}
+                            />
                         ))}
-                        <button onClick={clearFilters} className="text-shibumi-maroon font-body text-[10px] uppercase tracking-widest border-b border-shibumi-maroon/20 pb-1 hover:border-shibumi-maroon transition-all">
-                            Reset All Filters
-                        </button>
                     </aside>
 
                     {/* Product Grid */}
-                    <div className="flex-grow">
+                    <div className="flex-grow w-full">
                         <div className="flex justify-between items-center mb-8 border-b border-shibumi-black/10 pb-6">
                             <p className="font-body text-[10px] uppercase tracking-widest text-shibumi-dark-gray/60">
                                 Showing {filteredAndSortedProducts.length} Results
@@ -246,6 +392,7 @@ const CatalogNew = () => {
                                         <option value="newest">Newest First</option>
                                         <option value="price-asc">Price: Low to High</option>
                                         <option value="price-desc">Price: High to Low</option>
+                                        <option value="discounted">Discounted Items</option>
                                     </select>
                                     <ChevronDown size={14} className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-shibumi-black/40" />
                                 </div>
@@ -257,9 +404,24 @@ const CatalogNew = () => {
                                 </button>
                             </div>
                         </div>
+                        
+                        {/* Active Filter Chips */}
+                        {Object.keys(filters).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                {Object.entries(filters).flatMap(([key, values]) => 
+                                    values.map(val => (
+                                        <div key={`${key}-${val}`} className="flex items-center gap-2 bg-shibumi-light-gray px-4 py-2 rounded-full border border-shibumi-black/10">
+                                            <span className="font-body text-[9px] uppercase tracking-widest">{val}</span>
+                                            <button onClick={() => handleFilterChange(key, val)} className="text-shibumi-black/40 hover:text-shibumi-maroon"><X size={12} /></button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
+
                         {isLoading ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                {[1,2,3,4].map(n => (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+                                {[1,2,3,4,5,6].map(n => (
                                     <div key={n} className="space-y-8 animate-pulse">
                                         <div className="aspect-[3/4] bg-shibumi-light-gray rounded-[2rem]" />
                                         <div className="h-4 bg-shibumi-light-gray w-1/4 rounded" />
@@ -269,7 +431,7 @@ const CatalogNew = () => {
                             </div>
                         ) : (
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     <AnimatePresence mode="popLayout">
                                         {filteredAndSortedProducts.map((product) => (
                                             <ProductCard 
@@ -316,23 +478,16 @@ const CatalogNew = () => {
                                 <button onClick={() => setIsMobileFilterOpen(false)}><X size={24} /></button>
                             </div>
                             <div className="space-y-12">
-                                {Object.entries(availableFilters).map(([key, options]) => (
-                                    <div key={key} className="space-y-6">
-                                        <h3 className="font-body text-[10px] uppercase tracking-[0.3em] text-shibumi-black/40">{key}</h3>
-                                        <div className="flex flex-wrap gap-3">
-                                            {options.map(option => (
-                                                <button 
-                                                    key={option} 
-                                                    onClick={() => handleFilterChange(key, filters[key] === option ? '' : option)}
-                                                    className={`px-5 py-3 rounded-full border font-body text-[10px] uppercase tracking-widest transition-all ${filters[key] === option ? 'bg-shibumi-maroon border-shibumi-maroon text-white' : 'border-shibumi-black/10 text-shibumi-black hover:border-shibumi-black'}`}
-                                                >
-                                                    {option}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                                {FILTER_SECTIONS.map(({ title, key }) => (
+                                    <FilterSection 
+                                        key={key}
+                                        title={title}
+                                        options={availableFilters[key]}
+                                        selectedValues={filters[key]}
+                                        onChange={(val) => handleFilterChange(key, val)}
+                                    />
                                 ))}
-                                <button onClick={clearFilters} className="w-full py-5 border border-shibumi-black/10 rounded-full font-body text-[10px] uppercase tracking-widest hover:bg-shibumi-black hover:text-white transition-all">
+                                <button onClick={() => { clearFilters(); setIsMobileFilterOpen(false); }} className="w-full py-5 border border-shibumi-black/10 rounded-full font-body text-[10px] uppercase tracking-widest hover:bg-shibumi-black hover:text-white transition-all">
                                     Clear All
                                 </button>
                             </div>

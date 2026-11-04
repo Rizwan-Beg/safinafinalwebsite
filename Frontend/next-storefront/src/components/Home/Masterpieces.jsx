@@ -4,6 +4,7 @@ import { ShoppingBag, Check } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CartContext } from '../../context/CartContext';
+import { getTransformedThumbnailUrl } from '../../lib/cloudinary';
 
 const productsConfig = {
   tag: "Our Collection",
@@ -39,7 +40,7 @@ const Masterpieces = () => {
       try {
         const { fetchProducts } = await import('../../services/productService');
         const data = await fetchProducts('reg_01KRQKQ7G3BFCGV3NT7HT91ZJA');
-        setMedusaProducts(data.slice(0, 9)); // Take top 9 for the grid
+        setMedusaProducts(data.slice(0, 8)); // Take top 8 for the grid (2 rows of 4)
       } catch (err) {
         console.error("Masterpieces load failed", err);
       }
@@ -134,7 +135,7 @@ const Masterpieces = () => {
         )}
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredProducts.map((product, index) => (
             <Link key={product.id} href={`/purchase/${product.id}`}>
               <motion.div
@@ -146,9 +147,9 @@ const Masterpieces = () => {
                 {/* Image Container */}
                 <div className="relative h-[400px] overflow-hidden bg-[#fafafa] mb-6">
                   <img
-                    src={product.imageUrl}
+                    src={getTransformedThumbnailUrl(product.imageUrl)}
                     alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="w-full h-full object-contain p-2 transition-transform duration-700 group-hover:scale-110"
                   />
 
                 {/* Quick Add Button */}

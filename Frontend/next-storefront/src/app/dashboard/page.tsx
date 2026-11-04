@@ -1,6 +1,6 @@
-"use client";
-import PageComponent from "../../old-pages/Dashboard/Dashboard";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <PageComponent />;
+  redirect("/profile");
 }
+

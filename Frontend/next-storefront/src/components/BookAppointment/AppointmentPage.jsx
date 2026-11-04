@@ -26,12 +26,41 @@ const AppointmentPage = () => {
   const [formData, setFormData] = useState({
     date: "",
     phone: "",
+    guests: "",
+    city: "",
+    helpWith: [],
+    purchasingFor: [],
     notes: "",
   });
+
+  const HELP_OPTIONS = [
+    "Rug buying assistance",
+    "Interior Designer Program",
+    "Bulk Order",
+    "Order Related Enquiry",
+    "Careers",
+    "Other"
+  ];
+
+  const PURCHASING_OPTIONS = [
+    "Myself",
+    "My Client"
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (category, value) => {
+    setFormData((prev) => {
+      const current = prev[category];
+      if (current.includes(value)) {
+        return { ...prev, [category]: current.filter((v) => v !== value) };
+      } else {
+        return { ...prev, [category]: [...current, value] };
+      }
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -40,10 +69,18 @@ const AppointmentPage = () => {
       toast.error("Please log in to book an appointment.");
       return;
     }
-    if (!formData.date || !selectedTime || !formData.phone) {
+    if (!formData.date || !selectedTime || !formData.phone || !formData.city) {
       toast.error("Please fill in all required fields.");
       return;
     }
+
+    const structuredNotes = `
+Guests: ${formData.guests || "None"}
+City: ${formData.city}
+Help With: ${formData.helpWith.join(", ") || "Not specified"}
+Purchasing For: ${formData.purchasingFor.join(", ") || "Not specified"}
+Additional Notes: ${formData.notes || "None"}
+    `.trim();
 
     setLoading(true);
     try {
@@ -61,7 +98,7 @@ const AppointmentPage = () => {
           phone: formData.phone,
           date: formData.date,
           time: selectedTime,
-          notes: formData.notes,
+          notes: structuredNotes,
         }),
       });
 
@@ -84,7 +121,7 @@ const AppointmentPage = () => {
     return (
       <div className="min-h-screen bg-[#faf8f5]">
         {/* Decorative header band */}
-        <div className="h-64 bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden">
+        <div className="pt-28 pb-12 min-h-[260px] bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden">
           <div className="absolute inset-0 opacity-10"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -92,7 +129,7 @@ const AppointmentPage = () => {
           />
         </div>
 
-        <div className="max-w-2xl mx-auto px-6 -mt-32 relative z-10 pb-24">
+        <div className="max-w-2xl mx-auto px-6 -mt-20 relative z-10 pb-24">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -143,13 +180,13 @@ const AppointmentPage = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#faf8f5]">
-        <div className="h-64 bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden">
+        <div className="pt-28 pb-12 min-h-[260px] bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden flex items-center justify-center">
           <div className="absolute inset-0 opacity-10"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
             }}
           />
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative z-10 flex items-center justify-center">
             <h1 className="text-4xl sm:text-5xl font-serif text-white tracking-wide">
               Virtual Consultation
             </h1>
@@ -192,17 +229,17 @@ const AppointmentPage = () => {
   return (
     <div className="min-h-screen bg-[#faf8f5]">
       {/* Hero header */}
-      <div className="h-72 sm:h-80 bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden">
+      <div className="pt-32 sm:pt-36 pb-16 min-h-[340px] bg-gradient-to-br from-[#7A0C13] via-[#9a1a22] to-[#5a080e] relative overflow-hidden flex flex-col items-center justify-center">
         <div className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          <p className="text-[#F5E1E3] text-xs tracking-[0.3em] uppercase font-sans mb-4">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6">
+          <p className="text-[#F5E1E3] text-xs tracking-[0.3em] uppercase font-sans mb-3">
             Safina Carpets
           </p>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif text-white mb-4 tracking-wide">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif text-white mb-4 tracking-wide">
             Book a Free Rug Consultation
           </h1>
           <div className="w-16 h-[1px] bg-[#F5E1E3]/50 mb-4" />
@@ -286,36 +323,117 @@ const AppointmentPage = () => {
               </div>
             </div>
 
+            {/* Guests */}
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans">
+                Add Guests (Emails)
+              </label>
+              <input
+                type="text"
+                name="guests"
+                value={formData.guests}
+                onChange={handleInputChange}
+                placeholder="guest1@example.com, guest2@example.com"
+                className="w-full bg-[#faf8f5] border border-[#e5e7eb] px-5 py-4 text-[#171717] text-sm focus:outline-none focus:border-[#7A0C13] focus:ring-1 focus:ring-[#7A0C13]/20 transition-all placeholder:text-[#b0b0b0]"
+              />
+            </div>
+
+            {/* City */}
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans">
+                City <span className="text-[#7A0C13]">*</span>
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                className="w-full bg-[#faf8f5] border border-[#e5e7eb] px-5 py-4 text-[#171717] text-sm focus:outline-none focus:border-[#7A0C13] focus:ring-1 focus:ring-[#7A0C13]/20 transition-all"
+                required
+              />
+            </div>
+
             {/* Phone */}
             <div className="space-y-3">
               <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
                 </svg>
-                Phone Number <span className="text-[#7A0C13]">*</span>
+                Contact Number <span className="text-[#7A0C13]">*</span>
               </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="+91 XXXXX XXXXX"
-                className="w-full bg-[#faf8f5] border border-[#e5e7eb] px-5 py-4 text-[#171717] text-sm focus:outline-none focus:border-[#7A0C13] focus:ring-1 focus:ring-[#7A0C13]/20 transition-all placeholder:text-[#b0b0b0]"
-                required
-              />
+              <div className="flex">
+                <span className="inline-flex items-center px-4 bg-[#e5e7eb] text-[#696969] text-sm border border-r-0 border-[#e5e7eb]">
+                  +91
+                </span>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="XXXXX XXXXX"
+                  className="w-full bg-[#faf8f5] border border-[#e5e7eb] px-5 py-4 text-[#171717] text-sm focus:outline-none focus:border-[#7A0C13] focus:ring-1 focus:ring-[#7A0C13]/20 transition-all placeholder:text-[#b0b0b0]"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Help With */}
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans">
+                What can we help you with?
+              </label>
+              <div className="space-y-2">
+                {HELP_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-4 h-4 border flex items-center justify-center transition-colors ${formData.helpWith.includes(option) ? 'bg-[#7A0C13] border-[#7A0C13]' : 'border-[#e5e7eb] group-hover:border-[#171717]'}`}>
+                      {formData.helpWith.includes(option) && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={formData.helpWith.includes(option)}
+                      onChange={() => handleCheckboxChange('helpWith', option)}
+                    />
+                    <span className="text-sm text-[#171717]">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Purchasing For */}
+            <div className="space-y-3">
+              <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans">
+                Who are you purchasing rugs for?
+              </label>
+              <div className="space-y-2">
+                {PURCHASING_OPTIONS.map((option) => (
+                  <label key={option} className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`w-4 h-4 border rounded-full flex items-center justify-center transition-colors ${formData.purchasingFor.includes(option) ? 'border-[#7A0C13]' : 'border-[#e5e7eb] group-hover:border-[#171717]'}`}>
+                      {formData.purchasingFor.includes(option) && <div className="w-2 h-2 rounded-full bg-[#7A0C13]" />}
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={formData.purchasingFor.includes(option)}
+                      onChange={() => handleCheckboxChange('purchasingFor', option)}
+                    />
+                    <span className="text-sm text-[#171717]">{option}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* Notes */}
             <div className="space-y-3">
               <label className="text-xs uppercase tracking-[0.2em] text-[#696969] font-sans">
-                Additional Notes
+                Other Details
               </label>
               <textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
                 placeholder="Are there specific collections, sizes, or styles you'd like to explore?"
-                rows={4}
+                rows={3}
                 className="w-full bg-[#faf8f5] border border-[#e5e7eb] px-5 py-4 text-[#171717] text-sm focus:outline-none focus:border-[#7A0C13] focus:ring-1 focus:ring-[#7A0C13]/20 transition-all resize-none placeholder:text-[#b0b0b0]"
               />
             </div>

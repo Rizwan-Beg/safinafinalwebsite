@@ -24,20 +24,12 @@ const HomeNew = () => {
       <SubHero />
       <VideoSection />
       <Masterpieces />
-      <div className="py-24">
-        <RugVisual />
-      </div>
+      <RugVisual />
       <Features />
       <Blog />
-      <div className="py-24">
-        <ShopColor />
-      </div>
-      <div className="py-24">
-        <ShopSize />
-      </div>
-      <div className="py-24">
-        <ShopMaterial />
-      </div>
+      <ShopColor />
+      <ShopSize />
+      <ShopMaterial />
       <Story />
       <BeginJourney />
     </div>

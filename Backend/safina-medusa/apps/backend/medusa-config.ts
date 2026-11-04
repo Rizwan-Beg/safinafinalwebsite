@@ -28,6 +28,23 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/favorite",
+    },
+    {
+      resolve: "@medusajs/file",
+      options: {
+        providers: [
+          {
+            resolve: "@jaykanjia/medusa-file-cloudinary/providers/file-cloudinary",
+            id: "cloudinary",
+            options: {
+              apiKey: process.env.CLOUDINARY_API_KEY,
+              apiSecret: process.env.CLOUDINARY_API_SECRET,
+              cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+              secure: true,
+            },
+          },
+        ],
+      },
     }
   ]
 })

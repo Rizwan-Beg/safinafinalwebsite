@@ -10,16 +10,24 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   console.log("🔔 Razorpay Webhook Received");
 
   // Step 1: Verify Webhook Signature
-  if (webhookSecret && webhookSecret !== "ENTER_YOUR_SECRET_HERE") {
-    const expectedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(JSON.stringify(req.body))
-      .digest("hex");
+  if (!webhookSecret || webhookSecret === "ENTER_YOUR_SECRET_HERE") {
+    console.error("❌ RAZORPAY_WEBHOOK_SECRET is not configured on the server");
+    return res.status(500).send("Webhook secret not configured");
+  }
 
-    if (expectedSignature !== signature) {
-      console.error("❌ Invalid Webhook Signature");
-      return res.status(400).send("Invalid signature");
-    }
+  if (!signature) {
+    console.error("❌ Missing x-razorpay-signature header");
+    return res.status(400).send("Missing signature");
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", webhookSecret)
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+
+  if (expectedSignature !== signature) {
+    console.error("❌ Invalid Webhook Signature");
+    return res.status(400).send("Invalid signature");
   }
 
   const { event, payload } = req.body as any;
@@ -72,10 +80,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       const customerId = cart.customer_id;
 
       // Currency logic
-      let currencyCode = cart.currency_code || "inr";
-      if (cart.region_id === "reg_01KRQKQ7G3BFCGV3NT7HT91ZJA") {
-        currencyCode = "inr";
-      }
+      const currencyCode = (cart.currency_code || payment.currency || "inr").toLowerCase();
 
       // Create Order
       const { result: order } = await createOrderWorkflow(req.scope).run({

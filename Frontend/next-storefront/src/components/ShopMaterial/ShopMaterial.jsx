@@ -88,7 +88,7 @@ const ShopMaterial = () => {
   };
 
   return (
-    <section ref={containerRef} className="relative py-32 bg-white overflow-hidden">
+    <section ref={containerRef} className="relative py-20 md:py-24 bg-white overflow-hidden">
       {/* Background Text - Luxurious Watermark */}
       <div className="absolute top-1/2 left-0 w-full flex justify-center pointer-events-none select-none z-0 overflow-hidden">
         <h2 
@@ -100,7 +100,7 @@ const ShopMaterial = () => {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
-        <div className="text-center mb-20 space-y-6">
+        <div className="text-center mb-12 md:mb-16 space-y-6">
           <div className="flex flex-col items-center gap-4">
             <motion.span 
               className="text-shibumi-maroon text-[10px] tracking-[0.6em] font-body uppercase"

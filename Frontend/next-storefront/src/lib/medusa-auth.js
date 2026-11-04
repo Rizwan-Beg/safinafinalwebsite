@@ -47,6 +47,7 @@ async function medusaRequest(path, { method = "GET", body, token, skipAuth = fal
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(3000),
     });
   } catch {
     throw new Error(

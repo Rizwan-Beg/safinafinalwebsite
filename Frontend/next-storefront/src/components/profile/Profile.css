@@ -1,7 +1,7 @@
 .profile-shell {
   min-height: 100vh;
   background: linear-gradient(180deg, #faf8f6 0%, #ffffff 40%, #f5f0ec 100%);
-  padding-top: 155px;
+  padding-top: 135px;
   padding-bottom: 8vh;
 }
 
@@ -388,7 +388,7 @@
 .profile-wishlist-page {
   min-height: 100vh;
   background: linear-gradient(180deg, #faf8f6 0%, #ffffff 50%);
-  padding-top: 180px;
+  padding-top: 135px;
   padding-bottom: 8vh;
 }
 

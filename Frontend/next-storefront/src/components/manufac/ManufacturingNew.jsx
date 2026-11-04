@@ -442,7 +442,7 @@ const ManufacturingNew = () => {
       </section>
 
       {/* Main Narrative Content */}
-      <section className="py-24 md:py-32 lg:py-48 bg-white">
+      <section className="py-20 md:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-6 md:px-8 lg:px-12">
           {sections.map((item, index) => (
             <ZigZagItem key={index} {...item} index={index} />
@@ -451,7 +451,7 @@ const ManufacturingNew = () => {
       </section>
 
       {/* Story Highlight / Breath Section Style */}
-      <section className="relative w-full py-40 bg-shibumi-maroon overflow-hidden">
+      <section className="relative w-full py-24 md:py-28 bg-shibumi-maroon overflow-hidden">
         {/* Decorative background element */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] opacity-10 pointer-events-none">
           <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full spin-slow">

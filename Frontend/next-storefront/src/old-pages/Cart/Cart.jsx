@@ -16,8 +16,11 @@ const Cart = () => {
 
   if (cartItems.length === 0) {
     return (
-      <div className="container mx-auto text-center py-20 mt-[12vh] min-h-screen">
-        <h2 className="text-3xl font-bold mb-4">Your Cart is Empty</h2>
+      <div className="container mx-auto text-center pt-36 md:pt-44 pb-20 min-h-screen px-4">
+        <h2 className="text-3xl font-display text-shibumi-black mb-4">Your Cart is Empty</h2>
+        <p className="font-body text-sm text-shibumi-dark-gray/60 mb-8 max-w-sm mx-auto">
+          Explore our handcrafted rugs and discover the perfect centerpiece for your room.
+        </p>
         
         {/* --- 3. This is now a <button> that uses navigate on click --- */}
         <button 
@@ -31,8 +34,8 @@ const Cart = () => {
   }
 
   return (
-    <div className="container mx-auto mt-[15vh] mb-[10vh] p-4 min-h-screen">
-      <h1 className="font-display text-5xl md:text-7xl text-shibumi-black mb-16 text-center leading-tight">
+    <div className="container mx-auto pt-36 md:pt-44 pb-24 md:pb-32 px-4 sm:px-6 lg:px-8 min-h-screen">
+      <h1 className="font-display text-4xl md:text-6xl text-shibumi-black mb-12 text-center leading-tight">
         Your Shopping <span className="italic">Cart</span>
       </h1>
       
@@ -52,7 +55,7 @@ const Cart = () => {
                   <p className="font-body text-[10px] uppercase tracking-widest text-shibumi-dark-gray/60 mt-2">
                     {item.variant?.title !== 'Default Variant' ? `Variant: ${item.variant?.title}` : ''}
                   </p>
-                  <p className="font-body text-sm font-medium text-shibumi-maroon mt-3">₹{(item.unit_price / 100).toLocaleString('en-IN')}</p>
+                  <p className="font-body text-sm font-medium text-shibumi-maroon mt-3">₹{(item.unit_price).toLocaleString('en-IN')}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-6">
                   <div className="flex items-center border border-shibumi-black/20 rounded-none">
@@ -69,7 +72,7 @@ const Cart = () => {
                   </button>
                 </div>
                 <div className="font-body text-sm font-medium text-right w-24 ml-4 hidden sm:block text-shibumi-black">
-                  ₹{((item.unit_price / 100) * item.quantity).toLocaleString('en-IN')}
+                  ₹{(item.unit_price * item.quantity).toLocaleString('en-IN')}
                 </div>
               </div>
             ))}

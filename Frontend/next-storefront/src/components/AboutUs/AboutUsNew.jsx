@@ -117,7 +117,7 @@ const LegacySection = () => {
   }, []);
 
   return (
-    <section ref={containerRef} className="py-32 md:py-48 bg-white overflow-hidden">
+    <section ref={containerRef} className="py-20 md:py-28 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-24 items-end">
         <div className="lg:col-span-7" ref={textRef}>
           <span className="font-body text-shibumi-maroon text-sm uppercase tracking-[0.4em] block mb-12">The Legacy</span>
@@ -177,7 +177,7 @@ const VisionSection = () => {
   }, []);
 
   return (
-    <section className="py-32 bg-shibumi-light-gray/20">
+    <section className="py-20 md:py-28 bg-shibumi-light-gray/20">
       <div className="max-w-7xl mx-auto px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-32 items-center">
         <div className="lg:col-span-6 lg:order-2">
           <h2 className="font-display text-5xl md:text-7xl text-shibumi-maroon mb-12">The Visionary <br /> <span className="italic">Craftsmanship</span></h2>
@@ -213,7 +213,7 @@ const TeamSection = () => {
   ];
 
   return (
-    <section className="py-48 bg-white">
+    <section className="py-20 md:py-28 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-24 text-center">
           <h2 className="font-display text-5xl md:text-8xl text-shibumi-maroon leading-none">Our Heritage <br /><span className="italic">Custodians</span></h2>

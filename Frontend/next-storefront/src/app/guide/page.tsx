@@ -370,7 +370,7 @@ export default function GuidePage() {
             <a href="/catalog" className="w-full md:w-auto px-16 py-6 bg-shibumi-black text-white rounded-full font-body text-[10px] uppercase tracking-[0.3em] hover:bg-shibumi-maroon transition-all">
               Explore Collections
             </a>
-            <a href="/custom" className="w-full md:w-auto px-16 py-6 border border-shibumi-black/10 rounded-full font-body text-[10px] uppercase tracking-[0.3em] hover:bg-shibumi-black hover:text-white transition-all">
+            <a href="/services" className="w-full md:w-auto px-16 py-6 border border-shibumi-black/10 rounded-full font-body text-[10px] uppercase tracking-[0.3em] hover:bg-shibumi-black hover:text-white transition-all">
               Bespoke Design
             </a>
           </div>

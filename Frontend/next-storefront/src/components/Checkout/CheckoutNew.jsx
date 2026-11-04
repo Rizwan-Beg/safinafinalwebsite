@@ -25,7 +25,7 @@ const CheckoutNew = () => {
   const router = useRouter();
   const { user, isLoading: authLoading } = useContext(AuthContext);
   const { cart, cartItems, subtotal, taxTotal, total, clearCart, updateCart } = useContext(CartContext);
-  const { currency } = useContext(CurrencyContext);
+  const { currency, selectedRegion } = useContext(CurrencyContext);
   const symbol = currency === 'USD' ? '$' : '₹';
 
   const [address, setAddress] = useState('');
@@ -33,7 +33,7 @@ const CheckoutNew = () => {
   const [state, setState] = useState('');
   const [phone, setPhone] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('India');
+  const [country, setCountry] = useState(selectedRegion?.name || 'India');
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -64,12 +64,20 @@ const CheckoutNew = () => {
 
     const syncRegion = async () => {
       try {
-        // Set cart to the India region so Medusa calculates 5% GST
-        await updateCart({
-          region_id: 'reg_01KRQKQ7G3BFCGV3NT7HT91ZJA'
-        });
+        if (!cart?.region_id) {
+          const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
+          const res = await fetch(`${medusaUrl}/store/regions`, {
+            headers: { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "" }
+          });
+          if (res.ok) {
+            const { regions } = await res.json();
+            if (regions?.[0]?.id) {
+              await updateCart({ region_id: regions[0].id });
+            }
+          }
+        }
       } catch (err) {
-        console.error('Failed to sync region for tax:', err);
+        console.warn('Region check note:', err);
       }
     };
     syncRegion();
@@ -79,12 +87,22 @@ const CheckoutNew = () => {
     e.preventDefault();
 
     const newErrors = {};
-    if (!address) newErrors.address = "Street address is required.";
-    if (!city) newErrors.city = "City is required.";
-    if (!state) newErrors.state = "State is required.";
-    if (!phone || !/^[6-9]\d{9}$/.test(phone)) newErrors.phone = "Valid 10-digit Indian phone number is required.";
-    if (!postalCode || !/^\d{6}$/.test(postalCode)) newErrors.postalCode = "Valid 6-digit postal code is required.";
-    if (!country) newErrors.country = "Country is required.";
+    if (!address?.trim()) newErrors.address = "Street address is required.";
+    if (!city?.trim()) newErrors.city = "City is required.";
+    if (!state?.trim()) newErrors.state = "State / Province is required.";
+    
+    // International phone validation: 7-16 digits with optional +, spaces, hyphens
+    const cleanPhone = (phone || "").replace(/[\s\-()]/g, "");
+    if (!cleanPhone || !/^\+?[0-9]{7,16}$/.test(cleanPhone)) {
+      newErrors.phone = "Valid contact phone number is required (min 7 digits).";
+    }
+
+    // International postal/ZIP code validation: 3-10 alphanumeric characters
+    if (!postalCode || !/^[a-zA-Z0-9\s\-]{3,10}$/.test(postalCode.trim())) {
+      newErrors.postalCode = "Valid postal / ZIP code is required.";
+    }
+
+    if (!country?.trim()) newErrors.country = "Country is required.";
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -108,7 +126,7 @@ const CheckoutNew = () => {
         amountInPaise = 100;
       }
 
-      // Fetch the order_id from our new backend route
+      // Fetch the order_id from our backend route using secure cart_id verification
       const medusaUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000";
       const orderRes = await fetch(`${medusaUrl}/store/razorpay-order`, {
         method: "POST",
@@ -116,7 +134,10 @@ const CheckoutNew = () => {
           "Content-Type": "application/json",
           "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
         },
-        body: JSON.stringify({ amount: amountInPaise }),
+        body: JSON.stringify({ 
+          cart_id: cart?.id,
+          amount: amountInPaise 
+        }),
       });
       const orderData = await orderRes.json();
 
@@ -126,9 +147,11 @@ const CheckoutNew = () => {
         return;
       }
 
+      const verifiedAmount = orderData.amount || amountInPaise;
+
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY || 'rzp_test_RXatv1oo8vK4Ys',
-        amount: amountInPaise,
+        amount: verifiedAmount,
         currency: 'INR',
         name: 'Safina Carpets',
         description: 'Luxury Heritage Purchase',
@@ -169,7 +192,7 @@ const CheckoutNew = () => {
                   province: state, // Using province for state in Medusa
                   postal_code: postalCode,
                   phone: phone,
-                  country_code: 'in'
+                  country_code: (selectedRegion?.code && selectedRegion.code !== 'ROW' ? selectedRegion.code : 'in').toLowerCase()
                 }
               }),
             });
@@ -216,10 +239,10 @@ const CheckoutNew = () => {
   };
 
   return (
-    <main className="bg-shibumi-white min-h-screen pb-32 pt-[180px] md:pt-[130px]">
+    <main className="bg-shibumi-white min-h-screen pb-24 md:pb-32 pt-28 md:pt-36">
 
       {/* Slim full-bleed premium banner header */}
-      <header ref={titleRef} className="w-full bg-shibumi-black py-6 px-6 mb-12 flex items-center justify-between">
+      <header ref={titleRef} className="w-full bg-shibumi-black py-5 px-6 mb-8 md:mb-12 flex items-center justify-between">
         <Link
           href="/catalog"
           className="flex items-center gap-2 font-body text-[9px] uppercase tracking-widest text-white/40 hover:text-white transition-colors"
@@ -238,24 +261,24 @@ const CheckoutNew = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 md:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 lg:gap-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
           {/* Form Side */}
           <div className="lg:col-span-7">
-            <form onSubmit={placeOrderHandler} className="space-y-12">
+            <form onSubmit={placeOrderHandler} className="space-y-10">
               <section>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-10 h-10 rounded-full bg-shibumi-maroon text-white flex items-center justify-center font-display text-lg">1</div>
                   <h2 className="font-display text-2xl text-shibumi-maroon uppercase tracking-wider">Shipping Details</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                   <div className="md:col-span-2">
                     <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Street Address</label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className={`w-full bg-white border-b-2 py-4 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.address ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                      className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.address ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
                       placeholder="e.g. 2592 S. Beverly St"
                     />
                     {errors.address && <p className="text-red-500 text-[10px] mt-1 uppercase tracking-tighter">{errors.address}</p>}
@@ -267,62 +290,78 @@ const CheckoutNew = () => {
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      className={`w-full bg-white border-b-2 py-4 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.city ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                      className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.city ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
                       placeholder="e.g. New Delhi"
                     />
                     {errors.city && <p className="text-red-500 text-[10px] mt-1 uppercase tracking-tighter">{errors.city}</p>}
                   </div>
 
                   <div>
-                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">State</label>
-                    <select
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      className={`w-full bg-white border-b-2 py-4 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.state ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
-                    >
-                      <option value="">Select State</option>
-                      {indianStates.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
+                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">State / Province</label>
+                    {country === 'India' ? (
+                      <select
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.state ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                      >
+                        <option value="">Select State</option>
+                        {indianStates.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.state ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                        placeholder="e.g. California / London"
+                      />
+                    )}
                     {errors.state && <p className="text-red-500 text-[10px] mt-1 uppercase tracking-tighter">{errors.state}</p>}
                   </div>
 
                   <div>
                     <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Phone Number</label>
-                    <div className="flex items-center border-b-2 border-shibumi-maroon/10">
-                      <span className="py-4 px-1 text-shibumi-dark-gray/60 font-body text-sm">+91</span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        className={`w-full bg-white py-4 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.phone ? 'border-red-500' : 'focus:border-shibumi-maroon'}`}
-                        placeholder="10-digit number"
-                      />
-                    </div>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.phone ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                      placeholder="+91 98765 43210 or international"
+                    />
                     {errors.phone && <p className="text-red-500 text-[10px] mt-1 uppercase tracking-tighter">{errors.phone}</p>}
                   </div>
 
                   <div>
-                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Postal Code</label>
+                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Postal / ZIP Code</label>
                     <input
                       type="text"
                       value={postalCode}
                       onChange={(e) => setPostalCode(e.target.value)}
-                      className={`w-full bg-white border-b-2 py-4 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.postalCode ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
-                      placeholder="6-digit code"
+                      className={`w-full bg-white border-b-2 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none transition-smooth ${errors.postalCode ? 'border-red-500' : 'border-shibumi-maroon/10 focus:border-shibumi-maroon'}`}
+                      placeholder="Postal code"
                     />
                     {errors.postalCode && <p className="text-red-500 text-[10px] mt-1 uppercase tracking-tighter">{errors.postalCode}</p>}
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Country</label>
-                    <input
-                      type="text"
+                    <label className="block font-body text-[10px] uppercase tracking-widest text-shibumi-maroon/60 mb-2">Country / Region</label>
+                    <select
                       value={country}
-                      disabled
-                      className="w-full bg-shibumi-light-gray/20 border-b-2 border-shibumi-maroon/10 py-4 px-1 text-shibumi-dark-gray/60 cursor-not-allowed"
-                    />
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full bg-white border-b-2 border-shibumi-maroon/10 py-3.5 px-1 text-shibumi-dark-gray focus:outline-none focus:border-shibumi-maroon transition-smooth"
+                    >
+                      <option value="India">India</option>
+                      <option value="United States">United States</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="United Arab Emirates">United Arab Emirates</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Australia">Australia</option>
+                      <option value="Germany">Germany</option>
+                      <option value="France">France</option>
+                      <option value="Singapore">Singapore</option>
+                    </select>
                   </div>
                 </div>
               </section>
@@ -387,7 +426,7 @@ const CheckoutNew = () => {
                       <div className="flex-1">
                         <h4 className="font-display text-sm text-shibumi-dark-gray line-clamp-1 uppercase">{item.title}</h4>
                         <p className="font-body text-[10px] text-shibumi-dark-gray/60 uppercase tracking-widest mt-1">Quantity: {item.quantity}</p>
-                        <p className="font-body text-sm text-shibumi-maroon mt-2">{symbol}{(item.unit_price * item.quantity / 100).toLocaleString('en-IN')}</p>
+                        <p className="font-body text-sm text-shibumi-maroon mt-2">{symbol}{(item.unit_price * item.quantity).toLocaleString('en-IN')}</p>
                       </div>
                     </motion.div>
                   ))}
