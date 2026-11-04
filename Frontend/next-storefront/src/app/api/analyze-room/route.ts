@@ -9,6 +9,11 @@ import crypto from "crypto";
 const execFileAsync = promisify(execFile);
 
 async function runLocalCliAnalysis(file: Blob, originalName: string) {
+  // In production Docker container, Python is not present; only use CLI in development environments
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
   const candidateScripts = [
     path.resolve(process.cwd(), "../Backend/visualizer/cli_analyze.py"),
     path.resolve(process.cwd(), "Backend/visualizer/cli_analyze.py"),
@@ -125,6 +130,14 @@ export async function POST(req: NextRequest) {
       const debugFilename = parts[parts.length - 1];
       if (/^[a-zA-Z0-9_-]+\.(png|jpg|jpeg)$/.test(debugFilename)) {
         analysis.debug_overlay_url = `/api/visualizer-images/${debugFilename}`;
+      }
+    }
+
+    if (typeof analysis.clean_floor_url === "string") {
+      const parts = analysis.clean_floor_url.split("/");
+      const cleanFilename = parts[parts.length - 1];
+      if (/^[a-zA-Z0-9_-]+\.(png|jpg|jpeg)$/.test(cleanFilename)) {
+        analysis.clean_floor_url = `/api/visualizer-images/${cleanFilename}`;
       }
     }
 

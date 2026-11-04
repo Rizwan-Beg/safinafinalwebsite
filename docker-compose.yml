@@ -67,8 +67,10 @@ services:
       PORT: 3000
       NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
       NEXT_PUBLIC_BASE_URL: http://localhost:3000
+      VISUALIZER_API_URL: http://visualizer:8000
     depends_on:
       - medusa
+      - visualizer
 
   chatbot:
     build:

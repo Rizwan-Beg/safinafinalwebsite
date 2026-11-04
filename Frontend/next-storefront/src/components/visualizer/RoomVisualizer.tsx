@@ -178,6 +178,9 @@ export default function RoomVisualizer() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [aiOcclusionUrl, setAiOcclusionUrl] = useState<string | null>(null);
   const [debugOverlayUrl, setDebugOverlayUrl] = useState<string | null>(null);
+  const [cleanFloorUrl, setCleanFloorUrl] = useState<string | null>(null);
+  const [hasExistingRug, setHasExistingRug] = useState<boolean>(false);
+  const [replaceExistingRug, setReplaceExistingRug] = useState<boolean>(true);
   const [showDebug, setShowDebug] = useState(false);
   const [roomType, setRoomType] = useState<string>("Living Room");
   const [placementReason, setPlacementReason] = useState<string>("AI spatial floor analysis active.");
@@ -311,6 +314,15 @@ export default function RoomVisualizer() {
       }
       if (data.debug_overlay_url) {
         setDebugOverlayUrl(data.debug_overlay_url);
+      }
+      if (data.clean_floor_url) {
+        setCleanFloorUrl(data.clean_floor_url);
+      }
+      if (data.detected_furniture?.has_existing_rug) {
+        setHasExistingRug(true);
+        setReplaceExistingRug(true);
+      } else {
+        setHasExistingRug(false);
       }
       if (data.room_type) {
         const readableType = data.room_type
@@ -741,6 +753,22 @@ export default function RoomVisualizer() {
               />
               Auto-hide under objects
             </label>
+            {hasExistingRug && (
+              <div className="pt-2 mt-2 border-t border-white/10">
+                <label className="flex items-center gap-2 text-[10px] text-white/70 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={replaceExistingRug}
+                    onChange={(e) => setReplaceExistingRug(e.target.checked)}
+                    className="rounded bg-white/10 border-white/20 text-[#a82028] focus:ring-0"
+                  />
+                  <span>Replace existing rug on floor</span>
+                </label>
+                <p className="text-[9px] text-white/30 ml-4.5 mt-0.5">
+                  Restores clean floor underneath your new rug
+                </p>
+              </div>
+            )}
             {maskBusy && <p className="text-[9px] text-white/30 mt-1">Detecting furniture…</p>}
             <p className="text-[9px] text-white/25 mt-1.5 leading-relaxed">
               Under: click a sofa or table to send the rug behind it. Reveal: click to undo.
@@ -858,6 +886,7 @@ export default function RoomVisualizer() {
             {room && (
               <FloorRugCanvas
                 roomSrc={room.src}
+                floorPlateSrc={(replaceExistingRug && cleanFloorUrl) ? cleanFloorUrl : null}
                 floor={floor}
                 floorSize={floorSize}
                 rugs={rugs}

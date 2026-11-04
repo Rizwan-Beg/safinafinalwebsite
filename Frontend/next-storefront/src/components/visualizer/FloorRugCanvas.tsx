@@ -23,6 +23,7 @@ export type PointerTool = "move" | "under" | "reveal";
 
 type Props = {
   roomSrc: string;
+  floorPlateSrc?: string | null;
   floor: FloorQuad;
   floorSize: FloorSize;
   rugs: PlacedRug[];
@@ -41,7 +42,7 @@ type Props = {
   onOccludeClick: (pt: Vec2, add: boolean) => void;
 };
 
-const DIV = 20;
+const DIV = 32;
 const VERT_STRIDE = 4; // x, y, u, v
 
 const VS = `
@@ -161,6 +162,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 export default function FloorRugCanvas({
   roomSrc,
+  floorPlateSrc,
   floor,
   floorSize,
   rugs,
@@ -205,6 +207,7 @@ export default function FloorRugCanvas({
   const calRef = useRef(calibrating);
   const toolRef = useRef(tool);
   const roomSrcRef = useRef(roomSrc);
+  const floorPlateSrcRef = useRef(floorPlateSrc);
   const occRef = useRef(occlusion);
   const occMaskUrlRef = useRef(occlusionMaskUrl);
   const [layout, setLayout] = useState<ImageLayout | null>(null);
@@ -228,13 +231,14 @@ export default function FloorRugCanvas({
     occRef.current = occlusion;
     occMaskUrlRef.current = occlusionMaskUrl;
     roomSrcRef.current = roomSrc;
+    floorPlateSrcRef.current = floorPlateSrc;
     onFloorChangeRef.current = onFloorChange;
     onRugsChangeRef.current = onRugsChange;
     onSelectRef.current = onSelect;
     onToolbarRef.current = onToolbar;
     onReadyCanvasRef.current = onReadyCanvas;
     onOccludeClickRef.current = onOccludeClick;
-  }, [rugs, floor, floorSize, selectedId, calibrating, tool, occlusion, occlusionMaskUrl, roomSrc, onFloorChange, onRugsChange, onSelect, onToolbar, onReadyCanvas, onOccludeClick]);
+  }, [rugs, floor, floorSize, selectedId, calibrating, tool, occlusion, occlusionMaskUrl, roomSrc, floorPlateSrc, onFloorChange, onRugsChange, onSelect, onToolbar, onReadyCanvas, onOccludeClick]);
 
   const ensureTex = useCallback(async (gl: WebGLRenderingContext, url: string) => {
     const cached = texCache.current.get(url);
@@ -374,7 +378,9 @@ export default function FloorRugCanvas({
     };
 
     const roomTex = texCache.current.get(roomSrcRef.current);
-    if (roomTex && roomP) {
+    const floorPlateTex = floorPlateSrcRef.current ? texCache.current.get(floorPlateSrcRef.current) : null;
+    const baseTex = floorPlateTex || roomTex;
+    if (baseTex && roomP) {
       const tl = pxToClip(layout.x, layout.y, cssW, cssH);
       const tr = pxToClip(layout.x + layout.w, layout.y, cssW, cssH);
       const br = pxToClip(layout.x + layout.w, layout.y + layout.h, cssW, cssH);
@@ -399,7 +405,7 @@ export default function FloorRugCanvas({
       gl.enableVertexAttribArray(aUv);
       gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 16, 8);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, roomTex);
+      gl.bindTexture(gl.TEXTURE_2D, baseTex);
       gl.uniform1i(gl.getUniformLocation(roomP, "u_tex"), 0);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -485,13 +491,32 @@ export default function FloorRugCanvas({
       const zNorm = Math.min(1, Math.max(0, rug.z / sizeRef.current.depthFt));
       const shade = 1 - zNorm * 0.22;
       
-      // Realistic Soft Contact Shadow (thin, tight under rug perimeter with no harsh gray box)
-      const conShadow = tessellate(corners, 0.015, 0.02);
-      if (conShadow) {
-        upload(conShadow);
+      // Photorealistic 3-Tier Soft Contact Shadow & Ambient Occlusion
+      // Tier 1: Deep core contact AO (tight under rug perimeter, grounds physical carpet pile)
+      const coreShadow = tessellate(corners, 0.008, 0.012);
+      if (coreShadow) {
+        upload(coreShadow);
         bindSolid();
-        gl.uniform4f(gl.getUniformLocation(solP, "u_color"), 0.02, 0.02, 0.02, 0.25);
-        gl.drawArrays(gl.TRIANGLES, 0, conShadow.length / VERT_STRIDE);
+        gl.uniform4f(gl.getUniformLocation(solP, "u_color"), 0.01, 0.01, 0.01, 0.35);
+        gl.drawArrays(gl.TRIANGLES, 0, coreShadow.length / VERT_STRIDE);
+      }
+
+      // Tier 2: Medium penumbra shadow (soft directional falloff)
+      const penumbraShadow = tessellate(corners, 0.022, 0.028);
+      if (penumbraShadow) {
+        upload(penumbraShadow);
+        bindSolid();
+        gl.uniform4f(gl.getUniformLocation(solP, "u_color"), 0.01, 0.01, 0.01, 0.18);
+        gl.drawArrays(gl.TRIANGLES, 0, penumbraShadow.length / VERT_STRIDE);
+      }
+
+      // Tier 3: Soft ambient feather (feathered edge blur)
+      const featherShadow = tessellate(corners, 0.045, 0.048);
+      if (featherShadow) {
+        upload(featherShadow);
+        bindSolid();
+        gl.uniform4f(gl.getUniformLocation(solP, "u_color"), 0.02, 0.02, 0.02, 0.08);
+        gl.drawArrays(gl.TRIANGLES, 0, featherShadow.length / VERT_STRIDE);
       }
 
       const mesh = tessellate(corners);
@@ -628,6 +653,9 @@ export default function FloorRugCanvas({
     (async () => {
       try {
         await ensureTex(gl, roomSrc);
+        if (floorPlateSrc) {
+          await ensureTex(gl, floorPlateSrc);
+        }
         if (maskUrl) {
           await ensureTex(gl, maskUrl);
         }
@@ -646,7 +674,7 @@ export default function FloorRugCanvas({
     return () => {
       cancelled = true;
     };
-  }, [roomSrc, rugUrls, maskUrl, ensureTex, draw]);
+  }, [roomSrc, floorPlateSrc, rugUrls, maskUrl, ensureTex, draw]);
 
   useEffect(() => {
     occRef.current = occlusion;
