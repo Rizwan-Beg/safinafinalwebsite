@@ -14,13 +14,12 @@ from prompts import SYSTEM_PROMPT, build_user_prompt
 
 # Load env vars
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-if not GOOGLE_API_KEY:
-    raise ValueError("Google API key not found. Set it in .env file.")
-
-# Initialize Google GenAI client
-client = genai.Client(api_key=GOOGLE_API_KEY)
+def get_genai_client():
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("Google API key not found. Set it in .env file.")
+    return genai.Client(api_key=api_key)
 
 # FastAPI app
 app = FastAPI(
@@ -105,6 +104,7 @@ async def place_rug(
         )
 
         # Send request to Gemini using new SDK
+        client = get_genai_client()
         response = client.models.generate_content(
             model="gemini-3.1-flash-image",
             contents=[SYSTEM_PROMPT, user_prompt, rug, room],

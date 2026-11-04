@@ -6,11 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
   RotateCw, Trash2, Download, Home, Search, UploadCloud, X,
-  Ruler, ArrowRight, Copy, Grid3x3, MousePointer2, EyeOff, Eraser,
+  ArrowRight, Copy, Grid3x3, MousePointer2, EyeOff, Eraser,
   Sparkles, Eye, Loader2
 } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
-import { Product } from "@/types";
 import FloorRugCanvas, { type PointerTool } from "./FloorRugCanvas";
 import {
   clampRug,
@@ -19,7 +18,7 @@ import {
   type FloorSize,
   type PlacedRug,
 } from "./floorMath";
-import { buildOcclusionMask, loadRoomImage, type OccludeClick } from "./occlusionMask";
+import { composeOcclusionMask, loadRoomImage, type OccludeClick } from "./occlusionMask";
 
 import sampleRoom1 from "@/assets/visualizer/sample-room-1.jpg";
 import sampleRoom2 from "@/assets/visualizer/sample-room-2.jpg";
@@ -30,8 +29,6 @@ import rugroom2 from "@/assets/visualizer/rugroom2.jpg";
 import rugroom3 from "@/assets/visualizer/rugroom3.jpg";
 import rugroom4 from "@/assets/visualizer/rugroom4.jpg";
 import rugroom6 from "@/assets/visualizer/rugroom6.jpg";
-
-import { mockProducts } from "@/data/mockData";
 
 type Room = { name: string; src: string; floor: FloorQuad; floorSize: FloorSize };
 
@@ -116,7 +113,7 @@ const T = {
   },
 };
 
-function parseSize(p: any): { w: number; h: number } | null {
+function parseSize(p: { category?: string; size?: string; metadata?: Record<string, unknown> }): { w: number; h: number } | null {
   for (const s of [p.category, p.size, p.metadata?.size, p.metadata?.dimensions]) {
     if (!s) continue;
     const m = String(s).match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
@@ -129,7 +126,18 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-const OPTIMIZED_RUGS = [
+export type VisualizerProduct = {
+  id: string;
+  name: string;
+  images: string[];
+  category?: string;
+  size?: string;
+  price?: number;
+  metadata?: Record<string, unknown>;
+  image?: string;
+};
+
+const OPTIMIZED_RUGS: VisualizerProduct[] = [
   { id: "rug-kashan", name: "Kashan Royal Medallion", images: ["/images/rug-kashan.jpg"], category: "Persian", size: "8x10 ft", price: 8500, metadata: { size: "8x10 ft", material: "Wool & Silk" } },
   { id: "rug-tabriz", name: "Tabriz Garden of Paradise", images: ["/images/rug-tabriz.jpg"], category: "Silk", size: "8x10 ft", price: 12000, metadata: { size: "8x10 ft", material: "Pure Silk" } },
   { id: "rug-heriz", name: "Heriz Imperial Medallion", images: ["/images/rug-heriz.jpg"], category: "Tribal", size: "6x9 ft", price: 6800, metadata: { size: "6x9 ft", material: "Organic Wool" } },
@@ -147,7 +155,7 @@ const OPTIMIZED_RUGS = [
 export default function RoomVisualizer() {
   const [step, setStep] = useState<"room" | "canvas">("room");
   const [room, setRoom] = useState<Room | null>(null);
-  const [products, setProducts] = useState<any[]>(OPTIMIZED_RUGS);
+  const [products, setProducts] = useState<VisualizerProduct[]>(OPTIMIZED_RUGS);
   const [query, setQuery] = useState("");
   const [rugs, setRugs] = useState<PlacedRug[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -166,13 +174,14 @@ export default function RoomVisualizer() {
   const maskTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // AI Room Understanding & Computer Vision State
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisStatus, setAnalysisStatus] = useState<string | null>(null);
+  const [analysisStatus, setAnalysisStatus] = useState<"idle" | "analyzing" | "success" | "error">("idle");
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [aiOcclusionUrl, setAiOcclusionUrl] = useState<string | null>(null);
   const [debugOverlayUrl, setDebugOverlayUrl] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [roomType, setRoomType] = useState<string>("Living Room");
   const [placementReason, setPlacementReason] = useState<string>("AI spatial floor analysis active.");
+  const reqSequence = useRef(0);
 
   const canvasNode = useRef<HTMLCanvasElement | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
@@ -200,26 +209,30 @@ export default function RoomVisualizer() {
 
   const selected = rugs.find((r) => r.instanceId === selectedId) || null;
 
-  const rebuildMask = useCallback(async (nextFloor: FloorQuad, clicks: OccludeClick[], auto: boolean) => {
-    const img = roomImgRef.current;
-    if (!img) return;
-    setMaskBusy(true);
-    try {
-      const mask = buildOcclusionMask(img, nextFloor, clicks, auto);
-      setOcclusion(mask);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setMaskBusy(false);
-    }
-  }, []);
+  const rebuildMask = useCallback(
+    async (nextFloor: FloorQuad, clicks: OccludeClick[], auto: boolean, baseMaskUrl?: string | null) => {
+      const img = roomImgRef.current;
+      if (!img) return;
+      setMaskBusy(true);
+      try {
+        const activeBaseUrl = baseMaskUrl !== undefined ? baseMaskUrl : aiOcclusionUrl;
+        const mask = await composeOcclusionMask(img, activeBaseUrl, nextFloor, clicks, auto);
+        setOcclusion(mask);
+      } catch (e) {
+        console.error("Mask composition error:", e);
+      } finally {
+        setMaskBusy(false);
+      }
+    },
+    [aiOcclusionUrl]
+  );
 
   useEffect(() => {
     if (!room || step !== "canvas") return;
     let cancelled = false;
     roomImgRef.current = null;
     
-    // Use a small timeout to move setOcclusion out of the synchronous render/effect body
+    // Clear occlusion when room changes
     const timer = setTimeout(() => {
       if (!cancelled) setOcclusion(null);
     }, 0);
@@ -227,7 +240,7 @@ export default function RoomVisualizer() {
     loadRoomImage(room.src).then((img) => {
       if (cancelled) return;
       roomImgRef.current = img;
-      rebuildMask(floor, occludeClicks, autoOcclude);
+      rebuildMask(floor, occludeClicks, autoOcclude, aiOcclusionUrl);
     }).catch(console.error);
 
     return () => {
@@ -239,7 +252,7 @@ export default function RoomVisualizer() {
 
   const scheduleMask = (nextFloor: FloorQuad, clicks: OccludeClick[], auto: boolean) => {
     if (maskTimer.current) clearTimeout(maskTimer.current);
-    maskTimer.current = setTimeout(() => rebuildMask(nextFloor, clicks, auto), 180);
+    maskTimer.current = setTimeout(() => rebuildMask(nextFloor, clicks, auto, aiOcclusionUrl), 180);
   };
 
   const onFloorChange = (q: FloorQuad) => {
@@ -248,8 +261,10 @@ export default function RoomVisualizer() {
   };
 
   const triggerRoomAnalysis = useCallback(async (imageSrcOrBlob: string | Blob, roomName?: string) => {
-    setIsAnalyzing(true);
-    setAnalysisStatus("Analyzing room geometry & furniture with AI…");
+    const currentReq = ++reqSequence.current;
+    setAnalysisStatus("analyzing");
+    setAnalysisError(null);
+
     try {
       const formData = new FormData();
       if (imageSrcOrBlob instanceof Blob) {
@@ -266,11 +281,22 @@ export default function RoomVisualizer() {
       });
 
       if (!resp.ok) {
-        throw new Error(`Room analysis failed with status ${resp.status}`);
+        let msg = "Analysis failed";
+        try {
+          const errData = await resp.json();
+          if (errData?.error) msg = errData.error;
+        } catch {}
+        throw new Error(msg);
       }
 
       const data = await resp.json();
       console.log("AI Room Analysis Result:", data);
+
+      // Check if this request is still the newest one
+      if (reqSequence.current !== currentReq) {
+        console.log("Analysis result superseded by newer request.");
+        return;
+      }
 
       if (data.floor_quad) {
         setFloor(data.floor_quad);
@@ -280,6 +306,8 @@ export default function RoomVisualizer() {
       }
       if (data.occlusion_mask_url) {
         setAiOcclusionUrl(data.occlusion_mask_url);
+        // Automatically composite with existing manual clicks
+        rebuildMask(data.floor_quad || floor, occludeClicks, autoOcclude, data.occlusion_mask_url);
       }
       if (data.debug_overlay_url) {
         setDebugOverlayUrl(data.debug_overlay_url);
@@ -295,50 +323,35 @@ export default function RoomVisualizer() {
         setPlacementReason(data.suggested_placement.reason);
       }
 
+      // Preserve actual user-selected rug; never replace it with a default product
       if (data.suggested_placement) {
-        const { x, z, w, h } = data.suggested_placement;
+        const { x, z } = data.suggested_placement;
         const currentFloorSize = data.floor_size || floorSize;
         setRugs((prev) => {
-          if (prev.length === 0) {
-            const first = OPTIMIZED_RUGS[0];
-            const rug: PlacedRug = clampRug(
-              {
-                instanceId: uid(),
-                productId: first.id,
-                name: first.name,
-                img: first.images[0],
-                w: w || 8,
-                h: h || 10,
-                x: x,
-                z: z,
-                rot: 0,
-              },
-              currentFloorSize
-            );
-            setSelectedId(rug.instanceId);
-            return [rug];
-          } else {
-            return prev.map((r, idx) => {
-              if (idx === 0) {
-                return clampRug({ ...r, x, z }, currentFloorSize);
-              }
-              return r;
-            });
-          }
+          if (prev.length === 0) return prev;
+          // Apply anchor position to active selected rug (or primary rug), preserving product ID, name, image, w, h, and rot
+          const targetId = selectedId || prev[0].instanceId;
+          return prev.map((r) =>
+            r.instanceId === targetId ? clampRug({ ...r, x, z }, currentFloorSize) : r
+          );
         });
       }
 
+      setAnalysisStatus("success");
       toast.success(
         `AI Room Analysis: ${data.room_type ? data.room_type.replace("_", " ") : "Room"} detected`,
         T
       );
-    } catch (err: any) {
-      console.warn("AI Room Analysis failed:", err);
-    } finally {
-      setIsAnalyzing(false);
-      setAnalysisStatus(null);
+    } catch (err: unknown) {
+      if (reqSequence.current === currentReq) {
+        console.warn("AI Room Analysis failed:", err);
+        const msg = err instanceof Error ? err.message : "Room analysis failed";
+        setAnalysisStatus("error");
+        setAnalysisError(msg);
+        toast.error(`Room analysis: ${msg}`, T);
+      }
     }
-  }, [floorSize]);
+  }, [floor, floorSize, occludeClicks, autoOcclude, rebuildMask, selectedId]);
 
   useEffect(() => {
     (async () => {
@@ -358,7 +371,7 @@ export default function RoomVisualizer() {
         if (d.products && d.products.length > 0) {
           console.log("Loaded products from Medusa:", d.products.length);
           setProducts(
-            (d.products || []).map((p: any) => ({
+            (d.products || []).map((p: { id: string; title: string; thumbnail?: string; images?: { url: string }[]; collection?: { title: string }; metadata?: Record<string, unknown>; variants?: { calculated_price?: { calculated_amount: number } }[] }) => ({
               id: p.id,
               name: p.title,
               images: [p.thumbnail || p.images?.[0]?.url || ""],
@@ -456,27 +469,18 @@ export default function RoomVisualizer() {
     setCalibrating(calibrate);
     setOccludeClicks([]);
     setTool("move");
+    
+    // Clear previous room's AI mask, debug overlay, and analysis state
+    setAiOcclusionUrl(null);
+    setDebugOverlayUrl(null);
+    setOcclusion(null);
+    setAnalysisStatus("idle");
+    setAnalysisError(null);
+
+    // Reposition any existing customer rugs within the new floor bounds, strictly preserving their products
     setRugs((prev) => {
-      if (prev.length === 0) {
-        const first = OPTIMIZED_RUGS[0];
-        const rug: PlacedRug = clampRug(
-          {
-            instanceId: uid(),
-            productId: first.id,
-            name: first.name,
-            img: first.images[0],
-            w: 8,
-            h: 10,
-            x: r.floorSize.widthFt / 2,
-            z: r.floorSize.depthFt * 0.32,
-            rot: 0,
-          },
-          r.floorSize
-        );
-        setSelectedId(rug.instanceId);
-        return [rug];
-      }
-      return prev;
+      if (prev.length === 0) return prev;
+      return prev.map((rug) => clampRug(rug, r.floorSize));
     });
 
     // Run AI Room Understanding & Occlusion Segmentation
@@ -513,7 +517,7 @@ export default function RoomVisualizer() {
     toast.success("Image saved!", T);
   };
 
-  const selectProduct = (p: any) => {
+  const selectProduct = (p: VisualizerProduct) => {
     const rugImg = p.images?.[0] || p.image || "";
     console.log("Selecting product:", p.name, rugImg);
     const parsed = parseSize(p);
@@ -530,7 +534,7 @@ export default function RoomVisualizer() {
     place(rugImg, p.name, p.id, sz);
   };
 
-  const filtered = products.filter((p: Product) => (p.name || "").toLowerCase().includes(query.toLowerCase()));
+  const filtered = products.filter((p: VisualizerProduct) => (p.name || "").toLowerCase().includes(query.toLowerCase()));
 
   if (step === "room") {
     return (
@@ -642,14 +646,20 @@ export default function RoomVisualizer() {
               <p className="text-[9px] uppercase tracking-widest text-white/50 flex items-center gap-1.5 font-medium">
                 <Sparkles size={11} className="text-[#a82028]" /> AI Room Intelligence
               </p>
-              {isAnalyzing ? (
+              {analysisStatus === "analyzing" ? (
                 <span className="flex items-center gap-1 text-[8px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
                   <Loader2 size={9} className="animate-spin" /> Analyzing
                 </span>
-              ) : (
+              ) : analysisStatus === "success" ? (
                 <span className="flex items-center gap-1 text-[8px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active
                 </span>
+              ) : analysisStatus === "error" ? (
+                <span className="flex items-center gap-1 text-[8px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
+                  Failed
+                </span>
+              ) : (
+                <span className="text-[8px] text-white/40">Ready</span>
               )}
             </div>
 
@@ -662,19 +672,25 @@ export default function RoomVisualizer() {
                 <span className="text-white/40">Estimated Floor</span>
                 <span className="text-white/70 font-mono text-[9px]">{floorSize.widthFt} × {floorSize.depthFt} ft</span>
               </div>
-              <div className="text-[9px] text-white/40 leading-relaxed bg-white/[0.03] p-2 rounded border border-white/5">
-                {placementReason}
-              </div>
+              {analysisStatus === "error" && analysisError ? (
+                <div className="text-[9px] text-red-400/80 leading-relaxed bg-red-400/10 p-2 rounded border border-red-400/20">
+                  {analysisError}
+                </div>
+              ) : (
+                <div className="text-[9px] text-white/40 leading-relaxed bg-white/[0.03] p-2 rounded border border-white/5">
+                  {placementReason}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-1.5">
               <button
                 onClick={() => room && triggerRoomAnalysis(room.src, room.name)}
-                disabled={isAnalyzing}
+                disabled={analysisStatus === "analyzing"}
                 className="flex-1 flex items-center justify-center gap-1 py-1.5 text-[8px] uppercase tracking-wider bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded transition disabled:opacity-50"
               >
-                {isAnalyzing ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                Re-Analyze
+                {analysisStatus === "analyzing" ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                {analysisStatus === "error" ? "Retry Analysis" : "Re-Analyze"}
               </button>
               <button
                 onClick={() => setShowDebug((prev) => !prev)}
@@ -809,7 +825,7 @@ export default function RoomVisualizer() {
                   <p className="text-white/15 text-[10px]">No rugs found</p>
                 </div>
               )}
-              {filtered.map((p: Product) => (
+              {filtered.map((p: VisualizerProduct) => (
                 <button
                   key={p.id}
                   onClick={() => selectProduct(p)}
@@ -819,7 +835,7 @@ export default function RoomVisualizer() {
                 >
                   <div className="w-11 h-11 bg-white/5 shrink-0 overflow-hidden">
                     <img
-                      src={p.images?.[0] || (p as any).image || ""}
+                      src={p.images?.[0] || p.image || ""}
                       alt={p.name || "Rug"}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       onError={(e) => {
@@ -866,7 +882,7 @@ export default function RoomVisualizer() {
                 }}
               />
             )}
-            {isAnalyzing && (
+            {analysisStatus === "analyzing" && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-black/80 backdrop-blur-md border border-white/20 text-white text-[11px] px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2.5">
                 <Loader2 size={14} className="animate-spin text-[#a82028]" />
                 <span className="tracking-wide">AI analyzing room perspective & furniture...</span>

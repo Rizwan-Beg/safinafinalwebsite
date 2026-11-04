@@ -1,67 +1,86 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execFile } from "child_process";
-import { promisify } from "util";
-import path from "path";
-import fs from "fs/promises";
-import os from "os";
 
-const execFileAsync = promisify(execFile);
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
+    
+    // Safely reject arbitrary filesystem paths
+    if (formData.has("room_path")) {
+      return NextResponse.json(
+        { error: "Direct room_path is disabled for security. Please upload a room_image." },
+        { status: 400 }
+      );
+    }
+
     const file = formData.get("room_image") as File | null;
-    const roomPath = formData.get("room_path") as string | null;
-
-    let targetFilePath = "";
-    let isTemp = false;
-
-    if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const tempPath = path.join(os.tmpdir(), `room_upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`);
-      await fs.writeFile(tempPath, buffer);
-      targetFilePath = tempPath;
-      isTemp = true;
-    } else if (roomPath) {
-      targetFilePath = roomPath;
-    } else {
+    if (!file || !(file instanceof Blob) || file.size === 0) {
       return NextResponse.json({ error: "No room image provided" }, { status: 400 });
     }
 
-    const scriptPath = path.resolve(process.cwd(), "../../Backend/visualizer/cli_analyze.py");
-    const masksOutDir = path.resolve(process.cwd(), "public/visualizer-masks");
-    await fs.mkdir(masksOutDir, { recursive: true });
+    const visualizerUrl = process.env.VISUALIZER_API_URL || "http://localhost:8000";
+    const endpoint = `${visualizerUrl.replace(/\/$/, "")}/api/analyze-room`;
 
-    // Execute Python analyzer using system Python 3 with MPS GPU acceleration
-    const { stdout, stderr } = await execFileAsync("python3", [scriptPath, targetFilePath, masksOutDir], {
-      timeout: 30000,
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    // Forward multipart form data to FastAPI visualizer service
+    const upstreamForm = new FormData();
+    upstreamForm.append("room_image", file, file.name || "room.jpg");
 
-    if (isTemp) {
-      fs.unlink(targetFilePath).catch(() => {});
+    let upstreamRes: Response;
+    try {
+      upstreamRes = await fetch(endpoint, {
+        method: "POST",
+        body: upstreamForm,
+        signal: AbortSignal.timeout(35000), // 35s timeout for AI inference
+      });
+    } catch (networkErr: unknown) {
+      const isTimeout =
+        networkErr instanceof Error &&
+        (networkErr.name === "TimeoutError" || (networkErr as { code?: number }).code === 23);
+      console.error("FastAPI visualizer service unreachable:", networkErr);
+      return NextResponse.json(
+        {
+          error: isTimeout
+            ? "Room analysis timed out. The AI model is taking longer than expected."
+            : "The AI visualizer service is currently unavailable. Please verify the backend service is running.",
+        },
+        { status: 503 }
+      );
     }
 
-    // Find valid JSON in stdout
-    const lines = stdout.trim().split("\n");
-    let jsonStr = "";
-    for (let i = lines.length - 1; i >= 0; i--) {
-      if (lines[i].trim().startsWith("{") && lines[i].trim().endsWith("}")) {
-        jsonStr = lines[i].trim();
-        break;
+    if (!upstreamRes.ok) {
+      let upstreamErr = "Upstream analysis failed";
+      try {
+        const errJson = await upstreamRes.json();
+        if (errJson?.error) upstreamErr = errJson.error;
+      } catch {
+        // ignore parse error
+      }
+      return NextResponse.json({ error: upstreamErr }, { status: upstreamRes.status });
+    }
+
+    const analysis = await upstreamRes.json();
+
+    // Securely rewrite image URLs to use the same-origin proxy
+    // /images/mask_xxx.png -> /api/visualizer-images/mask_xxx.png
+    if (typeof analysis.occlusion_mask_url === "string") {
+      const parts = analysis.occlusion_mask_url.split("/");
+      const maskFilename = parts[parts.length - 1];
+      if (/^[a-zA-Z0-9_-]+\.(png|jpg|jpeg)$/.test(maskFilename)) {
+        analysis.occlusion_mask_url = `/api/visualizer-images/${maskFilename}`;
       }
     }
 
-    if (!jsonStr) {
-      console.error("Python analysis error. Stderr:", stderr, "Stdout:", stdout);
-      return NextResponse.json({ error: "Failed to parse analysis result" }, { status: 500 });
+    if (typeof analysis.debug_overlay_url === "string") {
+      const parts = analysis.debug_overlay_url.split("/");
+      const debugFilename = parts[parts.length - 1];
+      if (/^[a-zA-Z0-9_-]+\.(png|jpg|jpeg)$/.test(debugFilename)) {
+        analysis.debug_overlay_url = `/api/visualizer-images/${debugFilename}`;
+      }
     }
 
-    const analysis = JSON.parse(jsonStr);
     return NextResponse.json(analysis);
-  } catch (err: any) {
-    console.error("Room analysis route failed:", err);
-    return NextResponse.json({ error: err.message || "Analysis error" }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Analysis request failed";
+    console.error("Room analysis route error:", err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

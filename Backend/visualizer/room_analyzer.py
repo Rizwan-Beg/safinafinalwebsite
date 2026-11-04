@@ -10,8 +10,13 @@ from transformers import SegformerForSemanticSegmentation, SegformerImageProcess
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "generated_images")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Determine hardware acceleration
-DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+# Determine hardware acceleration with automatic fallbacks
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device("cpu")
 
 # Singleton model holder
 _MODEL = None
@@ -21,8 +26,12 @@ def get_segmenter():
     global _MODEL, _PROCESSOR
     if _MODEL is None or _PROCESSOR is None:
         model_id = "nvidia/segformer-b0-finetuned-ade-512-512"
-        _PROCESSOR = SegformerImageProcessor.from_pretrained(model_id, local_files_only=True)
-        _MODEL = SegformerForSemanticSegmentation.from_pretrained(model_id, local_files_only=True).to(DEVICE).eval()
+        try:
+            _PROCESSOR = SegformerImageProcessor.from_pretrained(model_id, local_files_only=True)
+            _MODEL = SegformerForSemanticSegmentation.from_pretrained(model_id, local_files_only=True).to(DEVICE).eval()
+        except Exception:
+            _PROCESSOR = SegformerImageProcessor.from_pretrained(model_id)
+            _MODEL = SegformerForSemanticSegmentation.from_pretrained(model_id).to(DEVICE).eval()
     return _PROCESSOR, _MODEL
 
 # Relevant ADE20K class IDs
@@ -134,19 +143,30 @@ def analyze_room_image(image_bytes: bytes, base_url: str = "http://localhost:800
         room_type = "living_room"
 
     # 3. High-Precision Occlusion Mask
-    # Extract all furniture pieces that stand in front of or on top of the floor
-    furn_mask = np.isin(seg, FURNITURE_CLASSES).astype(np.uint8)
+    # All non-structural objects (tables, chairs, desks, sofas, beds, cabinets, decor, lamps, plants)
+    # that rest on or stand in front of the floor must occlude the rug completely.
+    BG_CLASSES = [CLASS_WALL, CLASS_FLOOR, CLASS_CEILING, 8, 14, 18, 22, CLASS_RUG]
+    object_candidates = (~np.isin(seg, BG_CLASSES)).astype(np.uint8)
 
-    # Only occlude objects below the horizon (objects at or below the wall base)
-    # Give a 3% margin above horizon for objects resting on floor
-    cutoff_y = int(max(0, (horizon_y - 0.03) * orig_h))
-    furn_mask[:cutoff_y, :] = 0
+    # Use connected components to find all physical objects whose silhouettes stand on the floor
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(object_candidates)
+    furn_mask = np.zeros_like(object_candidates)
+
+    floor_threshold_y = (horizon_y - 0.15)
+    for label in range(1, num_labels):
+        obj_y_max = stats[label, cv2.CC_STAT_TOP] + stats[label, cv2.CC_STAT_HEIGHT]
+        area = stats[label, cv2.CC_STAT_AREA]
+        if area < 40:
+            continue
+        # If the object reaches into the floor region, the entire object occludes the floor/rug
+        if (obj_y_max / orig_h) >= floor_threshold_y:
+            furn_mask[labels == label] = 255
 
     # Clean up small holes in chair legs / table legs while keeping edges crisp
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    furn_clean = cv2.morphologyEx(furn_mask * 255, cv2.MORPH_CLOSE, kernel)
+    furn_clean = cv2.morphologyEx(furn_mask, cv2.MORPH_CLOSE, kernel)
     
-    # Sub-pixel anti-aliasing along the edges
+    # Sub-pixel anti-aliasing along the edges for smooth commercial-grade compositing
     furn_soft = cv2.GaussianBlur(furn_clean, (3, 3), 0)
 
     # Save occlusion mask as PNG (Grayscale where 255 = furniture foreground, 0 = floor)
@@ -246,6 +266,8 @@ def analyze_room_image(image_bytes: bytes, base_url: str = "http://localhost:800
         "room_type": room_type,
         "floor_quad": floor_quad,
         "floor_size": floor_size,
+        "is_visual_estimate": True,
+        "measurement_note": "Visual estimate from room perspective; calibrate if exact floor scale is required.",
         "suggested_placement": suggested_placement,
         "occlusion_mask_url": f"{base}images/{mask_filename}",
         "debug_overlay_url": f"{base}images/{debug_filename}",
@@ -255,6 +277,11 @@ def analyze_room_image(image_bytes: bytes, base_url: str = "http://localhost:800
             "has_sofa": bool(sofa_pixels > total_pixels * 0.01),
             "has_bed": bool(bed_pixels > total_pixels * 0.02)
         },
-        "confidence": 0.94
+        "diagnostics": {
+            "device": str(DEVICE),
+            "image_dimensions": [orig_w, orig_h],
+            "horizon_ratio": round(horizon_y, 4),
+            "foreground_occlusion_ratio": round(float((furn_mask > 0).sum() / furn_mask.size), 4)
+        }
     }
 

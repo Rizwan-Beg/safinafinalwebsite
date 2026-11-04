@@ -296,6 +296,56 @@ export function buildOcclusionMask(
   return toImageData(bin, w, h);
 }
 
+/**
+ * Deterministically composites AI baseline segmentation with manual Under/Reveal corrections.
+ * - If baseMaskUrl is provided: uses the AI mask as baseline.
+ * - Under clicks mark regions as foreground (1).
+ * - Reveal clicks mark regions as non-foreground (0).
+ * - If baseMaskUrl is null, falls back to heuristic auto mask.
+ */
+export async function composeOcclusionMask(
+  roomImg: HTMLImageElement,
+  baseMaskUrl: string | null,
+  nextFloor: FloorQuad,
+  clicks: OccludeClick[],
+  auto: boolean
+): Promise<ImageData> {
+  if (!baseMaskUrl) {
+    return buildOcclusionMask(roomImg, nextFloor, clicks, auto);
+  }
+
+  try {
+    const baseImg = await loadRoomImage(baseMaskUrl);
+    const { w, h, data } = drawImage(roomImg, MAX_W);
+
+    // Draw baseline AI mask scaled to identical dimension
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = w;
+    maskCanvas.height = h;
+    const mctx = maskCanvas.getContext("2d", { willReadFrequently: true })!;
+    mctx.drawImage(baseImg, 0, 0, w, h);
+    const mdata = mctx.getImageData(0, 0, w, h).data;
+
+    const bin = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      // White (255) in mask means furniture foreground
+      if (mdata[i * 4] > 120) {
+        bin[i] = 1;
+      }
+    }
+
+    // Apply manual user corrections
+    for (const click of clicks) {
+      flood(data, w, h, Math.round(click.x * w), Math.round(click.y * h), bin, click.add);
+    }
+
+    return toImageData(bin, w, h);
+  } catch (err) {
+    console.warn("Failed to composite AI mask with manual clicks, falling back to heuristic:", err);
+    return buildOcclusionMask(roomImg, nextFloor, clicks, auto);
+  }
+}
+
 export function loadRoomImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();

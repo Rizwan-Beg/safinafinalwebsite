@@ -66,45 +66,24 @@ uniform vec4 u_layout;
 uniform vec2 u_css;
 uniform float u_dpr;
 
-// Helper for soft light blending
-float softLight(float b, float s) {
-  return (s < 0.5) ? (2.0 * b * s + b * b * (1.0 - 2.0 * s)) : (sqrt(b) * (2.0 * s - 1.0) + 2.0 * b * (1.0 - s));
-}
-
-vec3 softLight(vec3 b, vec3 s) {
-  return vec3(softLight(b.r, s.r), softLight(b.g, s.g), softLight(b.b, s.b));
-}
-
 void main() {
   vec4 c = texture2D(u_tex, v_uv);
-  
-  // Calculate distance from edge for softening (0.0 to 1.0)
-  float edgeX = min(v_uv.x, 1.0 - v_uv.x);
-  float edgeY = min(v_uv.y, 1.0 - v_uv.y);
-  float edgeDist = min(edgeX, edgeY);
-  
-  // Soften the edges slightly to avoid "cut-out" look
-  float edgeAlpha = smoothstep(0.0, 0.02, edgeDist);
-  
+  if (c.a < 0.1) discard;
+
   vec2 cssPt = vec2(gl_FragCoord.x, u_css.y * u_dpr - gl_FragCoord.y) / u_dpr;
   vec2 ruv = (cssPt - u_layout.xy) / u_layout.zw;
   ruv = clamp(ruv, 0.0, 1.0);
   vec3 room = texture2D(u_room, ruv).rgb;
-  
-  // Extract room luminance and color tint
+
+  // Extract room luminance for natural ambient lighting
   float lum = dot(room, vec3(0.299, 0.587, 0.114));
-  
-  // Realistic lighting: 
-  // 1. Multiply by room luminance for basic shadows
-  // 2. Use soft light for highlights and ambient color matching
-  vec3 lit = c.rgb * mix(vec3(1.0), vec3(0.3 + lum * 1.1), u_lightMix);
-  lit = mix(lit, softLight(lit, room), u_lightMix * 0.3);
-  
-  // 3. Add subtle grain/noise to match room image texture
-  float grain = (fract(sin(dot(cssPt, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) * 0.035;
-  lit += grain * u_lightMix;
-  
-  gl_FragColor = vec4(lit * u_shade, c.a * u_alpha * edgeAlpha);
+
+  // Ground the rug with subtle room luminance without blending floor colors into the rug
+  float lightFactor = mix(1.0, clamp(0.78 + lum * 0.44, 0.80, 1.15), u_lightMix * 0.35);
+  vec3 lit = c.rgb * lightFactor * u_shade;
+
+  // Fully opaque, 100% solid handmade rug surface (no washed-out bleed-through)
+  gl_FragColor = vec4(lit, 1.0);
 }
 `;
 
@@ -227,6 +206,7 @@ export default function FloorRugCanvas({
   const toolRef = useRef(tool);
   const roomSrcRef = useRef(roomSrc);
   const occRef = useRef(occlusion);
+  const occMaskUrlRef = useRef(occlusionMaskUrl);
   const [layout, setLayout] = useState<ImageLayout | null>(null);
   const onFloorChangeRef = useRef(onFloorChange);
   const onRugsChangeRef = useRef(onRugsChange);
@@ -246,6 +226,7 @@ export default function FloorRugCanvas({
     calRef.current = calibrating;
     toolRef.current = tool;
     occRef.current = occlusion;
+    occMaskUrlRef.current = occlusionMaskUrl;
     roomSrcRef.current = roomSrc;
     onFloorChangeRef.current = onFloorChange;
     onRugsChangeRef.current = onRugsChange;
@@ -253,7 +234,7 @@ export default function FloorRugCanvas({
     onToolbarRef.current = onToolbar;
     onReadyCanvasRef.current = onReadyCanvas;
     onOccludeClickRef.current = onOccludeClick;
-  }, [rugs, floor, floorSize, selectedId, calibrating, tool, occlusion, roomSrc, onFloorChange, onRugsChange, onSelect, onToolbar, onReadyCanvas, onOccludeClick]);
+  }, [rugs, floor, floorSize, selectedId, calibrating, tool, occlusion, occlusionMaskUrl, roomSrc, onFloorChange, onRugsChange, onSelect, onToolbar, onReadyCanvas, onOccludeClick]);
 
   const ensureTex = useCallback(async (gl: WebGLRenderingContext, url: string) => {
     const cached = texCache.current.get(url);
@@ -561,9 +542,10 @@ export default function FloorRugCanvas({
       }
     }
 
-    const mask = (occlusionMaskUrl ? texCache.current.get(occlusionMaskUrl) : null) || maskTex.current;
+    const activeMaskUrl = occMaskUrlRef.current;
+    const mask = maskTex.current || (activeMaskUrl ? texCache.current.get(activeMaskUrl) : null);
     const roomTex2 = texCache.current.get(roomSrcRef.current);
-    if (mask && roomTex2 && (occlusionMaskUrl || occRef.current)) {
+    if (mask && roomTex2 && (activeMaskUrl || occRef.current)) {
       const tl = pxToClip(layout.x, layout.y, cssW, cssH);
       const tr = pxToClip(layout.x + layout.w, layout.y, cssW, cssH);
       const br = pxToClip(layout.x + layout.w, layout.y + layout.h, cssW, cssH);
@@ -690,7 +672,7 @@ export default function FloorRugCanvas({
 
   useEffect(() => {
     draw();
-  }, [floor, floorSize, rugs, selectedId, calibrating, draw]);
+  }, [floor, floorSize, rugs, selectedId, calibrating, occlusionMaskUrl, draw]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
